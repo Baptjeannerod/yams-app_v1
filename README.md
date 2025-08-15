@@ -1,1 +1,1 @@
-v7.4.2: SAFE MODE + corrections syntaxe, classements 3 blocs, préréglages d’affichage, PDF nettoyé.
+v7.4.3: JS pur (aucun 'and'/'or'), overlay d’erreur, classements 3 blocs, préréglages, PDF propre. SW/manifest 12.3.

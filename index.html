@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<link rel="manifest" href="manifest.webmanifest?v=12.2">
+<link rel="manifest" href="manifest.webmanifest?v=12.3">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Feuille de score & Classement</title>
 <style>
@@ -268,7 +268,7 @@
   const btnReload = document.getElementById('btnReload');
   function showErr(message, source, lineno, colno, error){
     overlay.style.display = 'block';
-    txt.textContent = [message, source?(' @ '+source+':'+lineno+':'+colno):'', error && error.stack ? ('\\n'+error.stack) : ''].join(' ');
+    txt.textContent = [message, source?(' @ '+source+':'+lineno+':'+colno):'', error && error.stack ? ('\n'+error.stack) : ''].join(' ');
   }
   window.addEventListener('error', (e)=> showErr(e.message, e.filename, e.lineno, e.colno, e.error));
   window.addEventListener('unhandledrejection', (e)=> showErr('Unhandled Promise rejection', '', 0, 0, e.reason));
@@ -295,7 +295,7 @@
     {key:'fives',  label:'5 ×', hint:'Somme des 5', max:25},
     {key:'sixes',  label:'6 ×', hint:'Somme des 6', max:30},
   ];
-  const CATS_LOWER = [
+  const CATS_LOER = [
     {key:'threeKind', label:'Brelan',        hint:'Somme des dés', max:30},
     {key:'fourKind',  label:'Carré',         hint:'Somme des dés', max:30},
     {key:'fullHouse', label:'Full',          hint:'25 pts',        max:25},
@@ -304,7 +304,7 @@
     {key:'yahtzee',   label:'Yam’s',         hint:'50 pts',        max:50},
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
-  const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
+  const ALL_CATS = CATS_UPPER.concat(CATS_LOER);
 
   // --- Clés de stockage ---
   const STORAGE_KEY = "yams-app-pages-v6.1-table";
@@ -346,11 +346,13 @@
     document.documentElement.setAttribute("data-scale", String(ui.scale||1));
     document.documentElement.setAttribute("data-dense", String(ui.dense||0));
     document.documentElement.style.setProperty("--col-min", (ui.colMin||150) + "px");
-    // Répercuter le preset dans le select
     const select = document.getElementById("presetDisplay");
     if (select){
       let preset = "comfort";
-      if (ui.dense === 1 and ui.scale && (Math.abs(ui.scale - 0.95) < 0.02)): pass
+      if (ui.dense === 1 && Math.abs(ui.scale - 0.95) < 0.02) preset = "compact";
+      if (ui.dense === 2 && ui.scale <= 0.91) preset = "ultra";
+      select.value = preset;
+      select.addEventListener("change", function(e){ applyUIPreset(e.target.value); });
     }
   })();
 
@@ -365,15 +367,15 @@
 
   // --- Utilitaires ---
   function canonicalName(name){ return (name || "").trim().toLowerCase(); }
-  function nameExists(name, exceptId=null){ const cn = canonicalName(name); return state.players.some(p => canonicalName(p.name) === cn && p.id !== exceptId); }
-  function newPlayer(name){ const scores = {}; ALL_CATS.forEach(c => scores[c.key] = ""); return { id: crypto.randomUUID(), name, scores }; }
+  function nameExists(name, exceptId){ const cn = canonicalName(name); return state.players.some(function(p){ return canonicalName(p.name) === cn && p.id !== exceptId; }); }
+  function newPlayer(name){ const scores = {}; ALL_CATS.forEach(function(c){ scores[c.key] = ""; }); return { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()), name: name, scores: scores }; }
   function num(v){ const n = Number(v); return isFinite(n) ? n : 0; }
-  function sumUpper(scores){ return CATS_UPPER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
-  function sumLower(scores){ return CATS_LOWER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
+  function sumUpper(scores){ return CATS_UPPER.reduce(function(s,c){ return s + num(scores[c.key]||0); }, 0); }
+  function sumLower(scores){ return CATS_LOER.reduce(function(s,c){ return s + num(scores[c.key]||0); }, 0); }
   function bonus(upper){ return upper >= 63 ? 35 : 0; }
   function totals(scores){ const u = sumUpper(scores), b = bonus(u), l = sumLower(scores); return { upper:u, bonus:b, lower:l, total:u + b + l }; }
-  function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"}[s])); }
-  function countFilled(scores){ return Object.values(scores).filter(v => v !== "" && v != null).length; }
+  function escapeHtml(str){ return String(str).replace(/[&<>"']/g, function(s){ return ({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"})[s]; }); }
+  function countFilled(scores){ return Object.values(scores).filter(function(v){ return v !== "" && v != null; }).length; }
 
   // --- Table de saisie ---
   const thead = document.getElementById("thead");
@@ -384,7 +386,7 @@
     const trHead = document.createElement("tr");
     const thCat = document.createElement("th"); thCat.className = "cat"; thCat.textContent = "Catégorie"; trHead.appendChild(thCat);
 
-    state.players.forEach(p => {
+    state.players.forEach(function(p){
       const th = document.createElement("th");
       th.className = "player"; th.dataset.playerId = p.id;
       th.innerHTML = `<div class="player-head">
@@ -393,8 +395,8 @@
         <button data-action="rename" title="Renommer">✎</button>
         <button data-action="delete" class="danger" title="Supprimer">✕</button>
       </div>`;
-      th.querySelector('[data-action="stats"]').addEventListener('click', ()=> openPlayerStats(p.id));
-      th.querySelector('[data-action="rename"]').addEventListener('click', ()=>{
+      th.querySelector('[data-action="stats"]').addEventListener('click', function(){ openPlayerStats(p.id); });
+      th.querySelector('[data-action="rename"]').addEventListener('click', function(){
         const current = p.name || "";
         const newName = prompt("Nouveau nom du joueur :", current);
         if (newName !== null){
@@ -404,9 +406,9 @@
           p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboards();
         }
       });
-      th.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
+      th.querySelector('[data-action="delete"]').addEventListener('click', function(){
         if (confirm(`Supprimer ${p.name || "ce joueur"} ?`)){
-          state.players = state.players.filter(pl => pl.id !== p.id); saveState(); buildTable(); renderLeaderboards();
+          state.players = state.players.filter(function(pl){ return pl.id !== p.id; }); saveState(); buildTable(); renderLeaderboards();
         }
       });
       trHead.appendChild(th);
@@ -414,49 +416,49 @@
     thead.appendChild(trHead);
 
     tbody.innerHTML = "";
-    function addRow(label, key, hint, max, className="", isLast=false){
+    function addRow(label, key, hint, max, className, isLast){
       const tr = document.createElement("tr"); if (isLast) tr.classList.add("last-row");
-      const tdCat = document.createElement("td"); tdCat.className = "cat " + className; tdCat.innerHTML = `${label} ${hint?`<span class="muted">(${hint})</span>`:""}`; tr.appendChild(tdCat);
-      state.players.forEach(p => {
-        const td = document.createElement("td"); td.className = "cell " + className;
-        if (key[0] !== "_"){
-          const input = document.createElement("input");
-          input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
+      const tdCat = document.createElement("td"); tdCat.className = "cat " + (className||""); tdCat.innerHTML = label + (hint?` <span class="muted">(${hint})</span>`:"");
+      tr.appendChild(tdCat);
+      state.players.forEach(function(p){
+        const td = document.createElement("td"); td.className = "cell " + (className||"");
+        if (key.charAt(0) !== "_"){
+          const input = document.createElement("input"); input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
           if (max != null){ input.placeholder = `0…${max}`; input.title = `Score max : ${max}`; }
           input.min = "0"; input.step = "1"; input.value = p.scores[key];
           applyFillClass(input);
-          input.addEventListener("keydown", (e)=>{ if (e.key === "ArrowUp" || e.key === "ArrowDown"){ e.preventDefault(); } });
-          input.addEventListener("input", ()=>{
-            const raw = input.value.replace(/[^\d]/g, ""); const v = raw === "" ? "" : clampInt(raw, 0, max ?? 200);
-            if (String(v) != input.value){ input.value = v; }
+          input.addEventListener("keydown", function(e){ if (e.key === "ArrowUp" || e.key === "ArrowDown"){ e.preventDefault(); } });
+          input.addEventListener("input", function(){
+            const raw = input.value.replace(/[^\d]/g, ""); const v = raw === "" ? "" : clampInt(raw, 0, max != null ? max : 200);
+            if (String(v) !== input.value){ input.value = v; }
             p.scores[key] = raw === "" ? "" : v; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboards();
           });
           td.appendChild(input);
-        } else { td.textContent=""; }
+        } else { td.textContent = ""; }
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
     }
-    CATS_UPPER.forEach(cat => addRow(cat.label, cat.key, cat.hint, cat.max));
+    CATS_UPPER.forEach(function(cat){ addRow(cat.label, cat.key, cat.hint, cat.max); });
     addRow("Sous-total (1→6)", "_upper", "", null, "subtotal");
     addRow("Bonus (≥63)", "_bonus", "", null, "subtotal");
-    CATS_LOWER.forEach(cat => addRow(cat.label, cat.key, cat.hint, cat.max));
+    CATS_LOER.forEach(function(cat){ addRow(cat.label, cat.key, cat.hint, cat.max); });
     addRow("Total", "_total", "", null, "total", true);
 
-    state.players.forEach(p => refreshComputedForPlayer(p.id));
+    state.players.forEach(function(p){ refreshComputedForPlayer(p.id); });
   }
   function applyFillClass(input){ if (String(input.value).trim() === ""){ input.classList.add("is-empty"); input.classList.remove("is-filled"); } else { input.classList.remove("is-empty"); input.classList.add("is-filled"); } }
   function clampInt(v, min, max){ let n = parseInt(v, 10); if (!isFinite(n)) n = 0; if (n < min) n = min; if (n > max) n = max; return n; }
   function totalsForPlayer(p){ return totals(p.scores).total; }
   function refreshComputedForPlayer(playerId){
-    const p = state.players.find(x => x.id === playerId); if (!p) return;
+    const p = state.players.find(function(x){ return x.id === playerId; }); if (!p) return;
     const t = totals(p.scores);
-    const colIdx = state.players.findIndex(x => x.id === playerId);
+    const colIdx = state.players.findIndex(function(x){ return x.id === playerId; });
     const rows = tbody.querySelectorAll("tr");
     const upperCount = CATS_UPPER.length;
     const subtotalRow = rows[upperCount];
     const bonusRow = rows[upperCount + 1];
-    const totalRow = rows[upperCount + 1 + CATS_LOWER.length + 1];
+    const totalRow = rows[upperCount + 1 + CATS_LOER.length + 1];
     function setCellText(tr, idx, text, cls){ const td = tr.children[idx + 1]; if (!td) return; td.textContent = String(text); td.className = "cell " + (cls || ""); }
     setCellText(subtotalRow, colIdx, t.upper, "subtotal");
     setCellText(bonusRow, colIdx, t.bonus, "subtotal");
@@ -470,18 +472,19 @@
   const lbWinsPills = document.getElementById("lbWinsPills");
   const lbBlocks = ["lb-current","lb-avg","lb-wins"];
   let hlIndex = 0;
-  lbTitle.addEventListener("click", ()=>{
-    document.getElementById(lbBlocks[hlIndex]).classList.remove("highlight");
-    hlIndex = (hlIndex + 1) % lbBlocks.length;
-    document.getElementById(lbBlocks[hlIndex]).classList.add("highlight");
+  lbTitle.addEventListener("click", function(){
+    document.getElementById(lbBlocks[hlIndex]).classList.remove("highlight"); hlIndex = (hlIndex + 1) % lbBlocks.length; document.getElementById(lbBlocks[hlIndex]).classList.add("highlight");
   });
 
   function winsTable(){
-    const wins = {}; state.players.forEach(p => wins[p.id]=0);
-    rounds.forEach(r => {
+    const wins = {}; state.players.forEach(function(p){ wins[p.id]=0; });
+    rounds.forEach(function(r){
       let best = -Infinity, bestId=null;
-      Object.entries(r.totals).forEach(([id,t])=>{ const v=Number(t)||0; if (v>best){ best=v; bestId=id; } });
-      if (bestId && wins[bestId]!=null) wins[bestId]++;
+      Object.entries(r.totals).forEach(function(entry){
+        const id = entry[0], t = Number(entry[1])||0;
+        if (t>best){ best=t; bestId=id; }
+      });
+      if (bestId && wins[bestId] != null) wins[bestId]++;
     });
     return wins;
   }
@@ -489,39 +492,39 @@
   function renderLeaderboards(){
     // Manche actuelle
     lbCurrentPills.innerHTML = "";
-    const cur = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
-    cur.forEach((r,i)=>{ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.total}`; lbCurrentPills.appendChild(s); });
+    const cur = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
+    cur.forEach(function(r,i){ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.total}`; lbCurrentPills.appendChild(s); });
     // Moyenne
     lbAvgPills.innerHTML = "";
-    const avg = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
-    avg.forEach((r,i)=>{ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; lbAvgPills.appendChild(s); });
+    const avg = state.players.map(function(p){ const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
+    avg.forEach(function(r,i){ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; lbAvgPills.appendChild(s); });
     // Victoires
     lbWinsPills.innerHTML = "";
     const wmap = winsTable();
-    const wr = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", w: wmap[p.id]||0 })).sort((a,b)=> b.w - a.w);
-    wr.forEach((r,i)=>{ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.w} vic.`; lbWinsPills.appendChild(s); });
+    const wr = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
+    wr.forEach(function(r,i){ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.w} vic.`; lbWinsPills.appendChild(s); });
   }
 
   // --- Historique ---
   const historyModal = document.getElementById("historyModal");
   const historyList = document.getElementById("historyList");
-  document.getElementById("openHistoryBtn").addEventListener('click', ()=>{ renderHistory(); backdrop.classList.add("open"); historyModal.classList.add("open"); });
-  document.getElementById("closeHistory").addEventListener('click', ()=>{ backdrop.classList.remove("open"); historyModal.classList.remove("open"); });
-  document.getElementById("clearHistoryBtn").addEventListener('click', ()=>{
+  document.getElementById("openHistoryBtn").addEventListener('click', function(){ renderHistory(); backdrop.classList.add("open"); historyModal.classList.add("open"); });
+  document.getElementById("closeHistory").addEventListener('click', function(){ backdrop.classList.remove("open"); historyModal.classList.remove("open"); });
+  document.getElementById("clearHistoryBtn").addEventListener('click', function(){
     if (!rounds.length) return; if (!confirm("Effacer tout l’historique des manches ?")) return;
     rounds = []; saveRounds(); renderHistory(); renderLeaderboards();
   });
   function renderHistory(){
     historyList.innerHTML = "";
     if (!rounds.length){ historyList.innerHTML = "<div class='muted' style='padding:8px'>Aucune manche enregistrée.</div>"; return; }
-    rounds.slice().reverse().forEach((r, idx)=>{
+    rounds.slice().reverse().forEach(function(r, idx){
       const div = document.createElement("div"); div.className = "history-item";
       const date = new Date(r.time).toLocaleString();
-      const arr = Object.entries(r.totals).map(([id, t])=>{
-        const name = (state.players.find(p=>p.id===id)?.name) || "Joueur";
-        return {id, name, t: Number(t)||0};
-      }).sort((a,b)=>b.t-a.t).slice(0,3);
-      const summary = arr.map((x,i)=> `${i+1}. ${x.name} ${x.t}`).join(" • ");
+      const arr = Object.entries(r.totals).map(function(ent){
+        const id = ent[0], t = ent[1]; const name = (state.players.find(function(p){ return p.id===id; })?.name) || "Joueur";
+        return {id:id, name:name, t:Number(t)||0};
+      }).sort(function(a,b){ return b.t-a.t; }).slice(0,3);
+      const summary = arr.map(function(x,i){ return `${i+1}. ${x.name} ${x.t}`; }).join(" • ");
       div.innerHTML = `<div><strong>Partie ${rounds.length - idx}</strong> — ${date}<br><span class="muted">${summary}</span></div>`;
       historyList.appendChild(div);
     });
@@ -531,15 +534,15 @@
   const roundToggleBtn = document.getElementById("roundToggleBtn");
   function updateRoundBtn(){ roundToggleBtn.textContent = roundActive ? "Clôturer la manche" : "Nouvelle manche"; }
   updateRoundBtn();
-  roundToggleBtn.addEventListener('click', ()=>{
+  roundToggleBtn.addEventListener('click', function(){
     if (!roundActive){
       if (!confirm("Commencer une nouvelle manche ? (réinitialise les cases)")) return;
-      state.players.forEach(p => { Object.keys(p.scores).forEach(k => p.scores[k] = ""); });
+      state.players.forEach(function(p){ Object.keys(p.scores).forEach(function(k){ p.scores[k] = ""; }); });
       saveState(); buildTable(); renderLeaderboards();
       roundActive = true; localStorage.setItem(ROUNDS_STATE_KEY, "1"); updateRoundBtn();
     } else {
       if (!state.players.length){ alert("Aucun joueur."); return; }
-      const totalsMap = {}; state.players.forEach(p => totalsMap[p.id] = totalsForPlayer(p));
+      const totalsMap = {}; state.players.forEach(function(p){ totalsMap[p.id] = totalsForPlayer(p); });
       rounds.push({ time: new Date().toISOString(), totals: totalsMap });
       saveRounds(); alert("Manche enregistrée !");
       roundActive = false; localStorage.setItem(ROUNDS_STATE_KEY, "0"); updateRoundBtn(); renderLeaderboards();
@@ -549,33 +552,33 @@
   // --- Stats & graphiques ---
   const playerStatsModal = document.getElementById("playerStatsModal");
   const playerStatsContent = document.getElementById("playerStatsContent");
-  document.getElementById("closePlayerStats").addEventListener('click', ()=>{ backdrop.classList.remove("open"); playerStatsModal.classList.remove("open"); });
+  document.getElementById("closePlayerStats").addEventListener('click', function(){ backdrop.classList.remove("open"); playerStatsModal.classList.remove("open"); });
 
   function getStatsAllRoundsForPlayer(id){
-    const scores = rounds.map(r => r.totals[id]).filter(v => typeof v === "number");
+    const scores = rounds.map(function(r){ return r.totals[id]; }).filter(function(v){ return typeof v === "number"; });
     const count = scores.length;
     if (!count) return {avg:null, best:null, worst:null, count:0, scores:[], wins:0, podiums:0, winRate:0, recentAvg:null, trend:null, bestStreak:0};
-    const sum = scores.reduce((a,b)=>a+b,0);
+    const sum = scores.reduce(function(a,b){ return a+b; },0);
     const avg = Math.round(sum / count);
-    const best = Math.max(...scores);
-    const worst = Math.min(...scores);
-    let wins=0, podiums=0;
-    rounds.forEach((r)=>{
-      const arr = Object.entries(r.totals).map(([pid,t])=>({pid, t:Number(t)||0})).sort((a,b)=>b.t-a.t);
-      const rank = arr.findIndex(x=>x.pid===id);
+    const best = Math.max.apply(null, scores);
+    const worst = Math.min.apply(null, scores);
+    var wins=0, podiums=0;
+    rounds.forEach(function(r){
+      const arr = Object.entries(r.totals).map(function(ent){ return {pid:ent[0], t:Number(ent[1])||0}; }).sort(function(a,b){ return b.t-a.t; });
+      const rank = arr.findIndex(function(x){ return x.pid===id; });
       if (rank===0) wins++;
       if (rank>-1 && rank<3) podiums++;
     });
     const winRate = Math.round( (wins / count) * 100 );
     const last5 = scores.slice(-5);
-    const recentAvg = Math.round(last5.reduce((a,b)=>a+b,0)/last5.length);
+    const recentAvg = Math.round(last5.reduce(function(a,b){ return a+b; },0)/last5.length);
     const trend = recentAvg - avg;
-    let bestStreak=0, cur=0;
-    rounds.forEach(r=>{
-      const arr = Object.entries(r.totals).map(([pid,t])=>({pid, t:Number(t)||0})).sort((a,b)=>b.t-a.t);
-      if (arr[0] && arr[0].pid===id){ cur++; bestStreak=Math.max(bestStreak,cur); } else { cur=0; }
+    var bestStreak=0, cur=0;
+    rounds.forEach(function(r){
+      const arr = Object.entries(r.totals).map(function(ent){ return {pid:ent[0], t:Number(ent[1])||0}; }).sort(function(a,b){ return b.t-a.t; });
+      if (arr[0] && arr[0].pid===id){ cur++; if (cur>bestStreak) bestStreak=cur; } else { cur=0; }
     });
-    return {avg, best, worst, count, scores, wins, podiums, winRate, recentAvg, trend, bestStreak};
+    return {avg:avg, best:best, worst:worst, count:count, scores:scores, wins:wins, podiums:podiums, winRate:winRate, recentAvg:recentAvg, trend:trend, bestStreak:bestStreak};
   }
 
   function makeChart(values, xlabel, ylabel){
@@ -589,14 +592,15 @@
       </svg>`;
     }
     const w=420,h=180,p=30;
-    const max = Math.max(...values, 1); const min = Math.min(...values, 0);
+    const max = Math.max.apply(null, values.concat([1])); const min = Math.min.apply(null, values.concat([0]));
     const range = Math.max(1, max-min);
     const step = (w-2*p)/Math.max(1, values.length-1);
-    const pts = values.map((v,i)=>{
+    let pts = "";
+    values.forEach(function(v,i){
       const x = p + i*step;
       const y = h - p - ((v-min)/range)*(h-2*p);
-      return `${x},${y}`;
-    }).join(" ");
+      pts += (i?" ":"") + x + "," + y;
+    });
     const y0 = h-p, x0 = p;
     // Y ticks
     const yTicks = 5;
@@ -633,12 +637,12 @@
   }
 
   function openPlayerStats(playerId){
-    const p = state.players.find(x=>x.id===playerId); if (!p) return;
+    const p = state.players.find(function(x){ return x.id===playerId; }); if (!p) return;
     const name = escapeHtml(p.name||"Joueur");
     const cur = totals(p.scores);
-    const currentSorted = state.players.map(x=>({id:x.id, total: totals(x.scores).total})).sort((a,b)=>b.total-a.total);
-    const rank = currentSorted.findIndex(x=>x.id===playerId)+1 || "-";
-    const leader = currentSorted[0]; const me = currentSorted.find(x=>x.id===playerId) || {total:0};
+    const currentSorted = state.players.map(function(x){ return {id:x.id, total: totals(x.scores).total}; }).sort(function(a,b){ return b.total-a.total; });
+    const rank = (currentSorted.findIndex(function(x){ return x.id===playerId; }) + 1) || "-";
+    const leader = currentSorted[0]; const me = currentSorted.find(function(x){ return x.id===playerId; }) || {total:0};
     const diffLeader = leader ? (leader.total - me.total) : 0;
     const filled = countFilled(p.scores); const totalCells = Object.keys(p.scores).length;
     const up = cur.upper, lo = cur.lower, bon = cur.bonus, need = Math.max(0, 63 - sumUpper(p.scores));
@@ -646,8 +650,6 @@
     const all = getStatsAllRoundsForPlayer(playerId);
     const svg = makeChart(all.scores, "Numéro de manche", "Score total");
 
-    const playerStatsModal = document.getElementById("playerStatsModal");
-    const playerStatsContent = document.getElementById("playerStatsContent");
     playerStatsContent.innerHTML = `
       <div class="stats-grid mini player-card">
         <div class="card">
@@ -682,20 +684,20 @@
   }
 
   // --- Export / Import / PDF ---
-  document.getElementById("exportBtn").addEventListener('click', ()=>{
+  document.getElementById("exportBtn").addEventListener('click', function(){
     const payload = { etat: state, historique_manches: rounds };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "yams-donnees.json";
     document.body.appendChild(a); a.click();
-    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
   });
   const importFile = document.getElementById("importFile");
-  document.getElementById("importBtn").addEventListener('click', ()=> importFile.click());
-  importFile.addEventListener('change', ()=>{
+  document.getElementById("importBtn").addEventListener('click', function(){ importFile.click(); });
+  importFile.addEventListener('change', function(){
     const file = importFile.files && importFile.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = ()=>{
+    reader.onload = function(){
       try{
         const data = JSON.parse(String(reader.result));
         if (!data || !data.etat || !Array.isArray(data.etat.players)) throw new Error("Format invalide");
@@ -707,7 +709,7 @@
     reader.readAsText(file);
   });
 
-  document.getElementById("exportPdfBtn").addEventListener('click', ()=>{
+  document.getElementById("exportPdfBtn").addEventListener('click', function(){
     buildPrintView();
     window.print();
   });
@@ -715,34 +717,31 @@
   function buildPrintView(){
     const wrapLB = document.getElementById("printLeaderboards");
     const wrapRounds = document.getElementById("printRounds");
-    const wrapPlayers = document.getElementById("printPlayers");
-    wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapPlayers.innerHTML = "";
+    const wrapPlayers = document.getElementById("printPlayers"); wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapPlayers.innerHTML = "";
 
     // Leaderboards
-    const lbCurrent = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
-    const lbAvg = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
-    const wmap = winsTable(); const lbWins = state.players.map(p => ({ name:p.name||"Sans nom", w: wmap[p.id]||0 })).sort((a,b)=> b.w - a.w);
+    const lbCurrent = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
+    const lbAvg = state.players.map(function(p){ const st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
+    const wmap = winsTable(); const lbWins = state.players.map(function(p){ return { name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
 
     wrapLB.innerHTML = `
-      <div><strong>Manche actuelle :</strong> ${lbCurrent.map((r,i)=>`${i+1}. ${r.name} — ${r.total}`).join(" • ") || "<em>Aucun joueur</em>"}</div>
-      <div><strong>Moyenne (toutes manches) :</strong> ${lbAvg.map((r,i)=>`${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`).join(" • ") || "<em>Aucun joueur</em>"}</div>
-      <div><strong>Par victoires :</strong> ${lbWins.map((r,i)=>`${i+1}. ${r.name} — ${r.w} vic.`).join(" • ") || "<em>Aucun joueur</em>"}</div>
+      <div><strong>Manche actuelle :</strong> ${lbCurrent.map(function(r,i){ return `${i+1}. ${r.name} — ${r.total}`; }).join(" • ") || "<em>Aucun joueur</em>"}</div>
+      <div><strong>Moyenne (toutes manches) :</strong> ${lbAvg.map(function(r,i){ return `${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; }).join(" • ") || "<em>Aucun joueur</em>"}</div>
+      <div><strong>Par victoires :</strong> ${lbWins.map(function(r,i){ return `${i+1}. ${r.name} — ${r.w} vic.`; }).join(" • ") || "<em>Aucun joueur</em>"}</div>
     `;
 
     // Rounds table + stocke dates pour graphiques
     const players = state.players;
-    window.__roundDates = rounds.map(r=>r.time);
-    const head = `<tr><th>Partie</th>${players.map(p=>`<th>${escapeHtml(p.name||"Joueur")}</th>`).join("")}</tr>`;
-    const rows = rounds.map((r,i)=>{
+    window.__roundDates = rounds.map(function(r){ return r.time; });
+    const head = `<tr><th>Partie</th>${players.map(function(p){ return `<th>${escapeHtml(p.name||"Joueur")}</th>`; }).join("")}</tr>`;
+    const rows = rounds.map(function(r,i){
       const date = new Date(r.time).toLocaleString();
-      const tds = players.map(p => `<td style="text-align:right">${r.totals[p.id]??""}</td>`).join("");
-      return `<tr><td>${i+1} — ${date}</td>${tds}</tr>`;
-    }).join("");
-    wrapRounds.innerHTML = `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||"<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>"}</table>`;
+      const tds = players.map(function(p){ return `<td style="text-align:right">${(r.totals[p.id] != null ? r.totals[p.id] : "")}</td>`; }).join(""); return `<tr><td>${i+1} — ${date}</td>${tds}</tr>`;
+    }).join(""); wrapRounds.innerHTML = `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||`<tr><td colspan='${players.length+1}'><em>Aucune partie</em></td></tr>`}</table>`;
 
-    // Player cards (sans "manche actuelle"), pas de saut de page
+    // Player cards (sans "manche actuelle")
     let statsHtml = "";
-    state.players.forEach(p=>{
+    state.players.forEach(function(p){
       const all = getStatsAllRoundsForPlayer(p.id);
       const svg = makeChart(all.scores, "Numéro de manche", "Score total");
       statsHtml += `<div class="player-card" style="margin:8px 0;padding:8px;border:1px solid #999">
@@ -768,9 +767,8 @@
   }
 
   // --- UI : ajouter joueur & réglages ---
-  document.getElementById("addPlayerBtn").addEventListener('click', ()=>{
-    const nameInput = document.getElementById("playerName");
-    const name = (nameInput.value || "").trim();
+  document.getElementById("addPlayerBtn").addEventListener('click', function(){
+    const nameInput = document.getElementById("playerName"); const name = (nameInput.value || "").trim();
     if (!name){ alert("Entrez un nom de joueur."); nameInput.focus(); return; }
     if (nameExists(name)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
     const p = newPlayer(name);
@@ -778,7 +776,7 @@
     saveState(); buildTable(); renderLeaderboards();
     nameInput.value = "";
   });
-  document.getElementById("playerName").addEventListener('keydown', (e)=>{ if (e.key === "Enter") document.getElementById("addPlayerBtn").click(); });
+  document.getElementById("playerName").addEventListener('keydown', function(e){ if (e.key === "Enter") document.getElementById("addPlayerBtn").click(); });
 
   const settingsBtn = document.getElementById("settingsBtn");
   const backdrop = document.getElementById("backdrop");
@@ -788,17 +786,34 @@
   function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
   settingsBtn.addEventListener("click", openSettings);
   closeSettings.addEventListener("click", closeSettingsModal);
-  backdrop.addEventListener("click", ()=>{ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); });
+  backdrop.addEventListener("click", function(){ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); });
 
   const presetSelect = document.getElementById("presetDisplay");
-  presetSelect.addEventListener("change", (e)=> applyUIPreset(e.target.value));
+  presetSelect.addEventListener("change", function(e){ applyUIPreset(e.target.value); });
 
   // Initial
   buildTable(); renderLeaderboards(); updateRoundBtn();
-  window.__roundDates = rounds.map(r=>r.time);
+  window.__roundDates = rounds.map(function(r){ return r.time; });
+
+  // Thème manuel/auto
+  document.querySelectorAll('input[name="themeMode"]').forEach(function(radio){
+    radio.addEventListener('change', function(e){
+      try{ localStorage.setItem(THEME_KEY, e.target.value); }catch(err){}
+      applyTheme(e.target.value);
+    });
+  });
+
+  // Boutons de données / cache
+  document.getElementById("clearCacheBtn").addEventListener('click', async function(){
+    try{
+      const keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      if (navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
+      alert("Caches et SW supprimés. Recharge la page.");
+    }catch(e){ alert("Impossible de vider les caches : " + e.message); }
+  });
 
   // SW
-  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v12.2.js")); }
+  if ("serviceWorker" in navigator){ window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw-v12.3.js"); }); }
 })();
 </script>
 </body>
