@@ -1,1 +1,1 @@
-v7.4: Classement totalement unifié (tableau unique), stats FR ultra-lisibles, PDF FR repensé, nouveau SW.
+v7.4.1: Réglages d’affichage regroupés, retour classement 3 blocs, graphes avec abscisses numéros+dates et ordonnées claires, PDF sans manche actuelle, pas de saut de page par joueur.
