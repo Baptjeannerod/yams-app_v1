@@ -1,1 +1,1 @@
-v6.3: Limites corrigées (1→5,2→10,...,6→30) + coloration des champs (rouge si vide, vert si rempli). Conserve toutes les fonctionnalités.
+v7: Multi-manches (moyenne/meilleur + historique), Export PDF (print A4 paysage), largeur de colonnes, densité (Normal/Compact/Ultra), totaux collés en bas, toutes les features précédentes.

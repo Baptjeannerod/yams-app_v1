@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light" data-scale="1" data-uc="0">
+<html lang="fr" data-theme="light" data-scale="1" data-dense="0" style="--col-min:150px;">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest?v=7">
+<link rel="manifest" href="manifest.webmanifest?v=8">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Scores & Classement</title>
 <style>
@@ -32,18 +32,16 @@
     --sticky: color-mix(in oklab, var(--panel) 96%, transparent);
   }
 
-  /* Zoom (UI scale) */
+  /* Zoom */
   html { font-size: calc(16px * var(--scale, 1)); }
   html[data-scale="0.9"]{ --scale: .9; }
   html[data-scale="1"]{ --scale: 1; }
   html[data-scale="1.1"]{ --scale: 1.1; }
 
-  /* Ultra-compact */
-  html[data-uc="1"]{
-    --uc-font: .85rem;
-    --uc-pad: 4px;
-    --uc-input: 4.2rem;
-  }
+  /* Densité */
+  html[data-dense="0"]{ --dense-font: 1rem; --dense-pad: 8px; --input-w: 5.2rem; }
+  html[data-dense="1"]{ --dense-font: .9rem; --dense-pad: 6px; --input-w: 4.6rem; }
+  html[data-dense="2"]{ --dense-font: .8rem; --dense-pad: 4px; --input-w: 4.0rem; }
 
   html, body { height:100%; margin:0; background:var(--bg); color:var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial;
@@ -53,17 +51,17 @@
     display:flex; align-items:center; gap:12px;
   }
   h1{ font-size: clamp(20px, 2.6vw, 28px); margin:0; line-height:1.2; }
-  .sub{ color:var(--muted); font-size: 1rem; }
+  .sub{ color:var(--muted); font-size: .95rem; }
   .spacer{ flex:1; }
 
   main{ padding: 16px; display:grid; gap:16px; }
 
   .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-  button, input{
+  button, input, select{
     background:#fff; color:var(--text); border:1px solid var(--border); padding:10px 12px; border-radius:10px; outline:none;
     min-height:40px; font-size:1rem;
   }
-  html[data-theme="dark"] button, html[data-theme="dark"] input { background:#111827; }
+  html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select { background:#111827; }
 
   .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   .rank-pill{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; }
@@ -82,36 +80,32 @@
     text-align: center;
   }
   th, td{
-    padding: 8px 6px;
+    padding: var(--dense-pad) 6px;
     border-bottom: 1px solid var(--border);
     border-right: 1px solid var(--border);
     background-clip: padding-box;
-  }
-  html[data-uc="1"] th, html[data-uc="1"] td{
-    padding: var(--uc-pad);
-    font-size: var(--uc-font);
+    font-size: var(--dense-font);
   }
   th:last-child, td:last-child{ border-right: none; }
   tbody tr:nth-child(odd){ background: var(--row-alt); }
 
   th.cat, td.cat{ width: 220px; text-align: left; }
-  th.player{ min-width: 140px; }
+  th.player{ min-width: var(--col-min); }
 
   .player-head{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
   .player-head .name{ font-weight:700; text-align:center; }
 
   .cell{ text-align: center; }
-  .cell input[type="number"]{ width: 5.2rem; text-align:center; min-height:34px; margin: 0 auto; display:block; }
-  html[data-uc="1"] .cell input[type="number"]{ width: var(--uc-input); min-height: 30px; }
-
-  /* Empty/filled status */
+  .cell input[type="number"]{ width: var(--input-w); text-align:center; min-height:34px; margin: 0 auto; display:block; }
   .cell input.is-empty{ background: var(--danger); border-color: var(--danger-border); }
   .cell input.is-filled{ background: var(--success); border-color: var(--success-border); }
 
-  /* Sticky first column */
+  /* Sticky first column + sticky last row (Total) */
   th:first-child, td:first-child{
     position: sticky; left: 0; z-index: 4; background: var(--sticky);
   }
+  tr.last-row td{ position: sticky; bottom: 0; background: var(--sticky); z-index: 3; }
+
   .subtotal{ color: var(--muted); font-weight: 600; text-align:center; }
   .total{ font-weight:800; text-align:center; }
 
@@ -130,7 +124,7 @@
   .modal{
     position: fixed; z-index: 100;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: min(560px, calc(100vw - 32px));
+    width: min(640px, calc(100vw - 32px));
     background: var(--panel); color: var(--text);
     border: 1px solid var(--border); border-radius: 16px; padding: 16px;
     box-shadow: 0 24px 64px rgba(0,0,0,.25);
@@ -147,13 +141,29 @@
   .hidden-input{ display:none; }
   .danger-btn{ border-color: var(--danger-border); color: #7f1d1d; }
   .toggle{ display:flex; align-items:center; gap:10px; }
+
+  /* History modal */
+  .history-list{ max-height: 50vh; overflow:auto; background: var(--panel); border:1px solid var(--border); border-radius: 12px; padding: 8px; }
+  .history-item{ padding:8px; border-bottom:1px dashed var(--border); display:flex; gap:10px; align-items:center; justify-content:space-between; }
+  .history-item:last-child{ border-bottom:none; }
+
+  /* Print (PDF) */
+  @media print{
+    @page{ size: A4 landscape; margin: 12mm; }
+    header, .toolbar, .settings-btn, .backdrop, .modal { display: none !important; }
+    body{ background:white; }
+    .table-wrap{ border:none; }
+    .leaderboard{ margin-bottom: 8px; }
+    .rank-pill{ border:1px solid #999 !important; background:#eee !important; }
+    th, td{ border:1px solid #666 !important; background: white !important; color: black !important; }
+  }
 </style>
 </head>
 <body>
   <header>
     <div>
       <h1>Yam’s — Scores & Classement</h1>
-      <div class="sub">Vue tableau compacte. Saisie fluide, limites par catégorie, PWA iPad-friendly.</div>
+      <div class="sub">Vue tableau compacte. Multi-manches, PDF, densité & largeur, totaux collés.</div>
     </div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
@@ -164,6 +174,9 @@
       <input id="playerName" placeholder="Nom du joueur" />
       <button id="addPlayerBtn">Ajouter</button>
       <button id="resetAllBtn">Tout réinitialiser</button>
+      <button id="closeRoundBtn">Clôturer la manche</button>
+      <button id="newRoundBtn">Nouvelle manche</button>
+      <button id="openHistoryBtn">Historique</button>
     </div>
 
     <section class="leaderboard" id="leaderboard">
@@ -203,26 +216,47 @@
         <button class="ghost-btn" data-zoom="1">Normal</button>
         <button class="ghost-btn" data-zoom="1.1">Grand</button>
       </div>
-      <div class="row toggle">
-        <input type="checkbox" id="ucToggle" />
-        <label for="ucToggle">Mode ultra-compact</label>
+      <div class="row">
+        <label>Densité :</label>
+        <button class="ghost-btn" data-dense="0">Normal</button>
+        <button class="ghost-btn" data-dense="1">Compact</button>
+        <button class="ghost-btn" data-dense="2">Ultra</button>
+      </div>
+      <div class="row">
+        <label for="colWidth">Largeur des colonnes :</label>
+        <select id="colWidth">
+          <option value="130">Petit</option>
+          <option value="150" selected>Standard</option>
+          <option value="180">Grand</option>
+        </select>
       </div>
     </div>
 
     <div class="section">
       <h4>Données</h4>
       <div class="actions">
-        <button id="exportBtn">Exporter</button>
-        <button id="importBtn">Importer</button>
+        <button id="exportBtn">Exporter (JSON)</button>
+        <button id="importBtn">Importer (JSON)</button>
+        <button id="exportPdfBtn">Exporter en PDF</button>
         <button id="clearCacheBtn" class="danger-btn" title="Supprimer les caches et le service worker">Vider le cache</button>
         <input id="importFile" class="hidden-input" type="file" accept="application/json" />
       </div>
     </div>
   </div>
 
+  <!-- History Modal -->
+  <div id="historyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+    <div class="close-line"><button id="closeHistory" class="ghost-btn" aria-label="Fermer">✕</button></div>
+    <h3 id="historyTitle">Historique des manches</h3>
+    <div id="historyList" class="history-list"></div>
+    <div class="actions" style="margin-top:8px;">
+      <button id="clearHistoryBtn" class="danger-btn">Effacer l’historique</button>
+    </div>
+  </div>
+
 <script>
 (function(){
-  // Correct limits with 5 dice in the upper section
+  // Limites avec 5 dés en section haute
   const CATS_UPPER = [
     {key:'ones',   label:'1 ×', hint:'Somme des 1', max:5},
     {key:'twos',   label:'2 ×', hint:'Somme des 2', max:10},
@@ -241,11 +275,13 @@
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
   const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
-  const STORAGE_KEY = "yams-app-pages-v6.1-table"; // garder la compat
-  const THEME_KEY = "yams-theme-mode";
-  const UI_KEY = "yams-ui"; // { scale, uc }
 
-  /** Theme handling **/
+  const STORAGE_KEY = "yams-app-pages-v6.1-table"; // compat scores en cours
+  const ROUNDS_KEY = "yams-rounds-v7"; // historique des manches
+  const THEME_KEY = "yams-theme-mode";
+  const UI_KEY = "yams-ui-v7"; // { scale, dense, colMin }
+
+  /** Theme **/
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
   function applyTheme(mode){
     let theme = mode;
@@ -262,25 +298,31 @@
   }
   initTheme();
 
-  /** UI (zoom + ultra-compact) **/
+  /** UI (zoom + densité + largeur) **/
   function applyUI(ui){
     if (!ui) return;
     if (ui.scale){ document.documentElement.setAttribute("data-scale", String(ui.scale)); }
-    document.documentElement.setAttribute("data-uc", ui.uc ? "1" : "0");
-    const ucToggle = document.getElementById("ucToggle");
-    if (ucToggle) ucToggle.checked = !!ui.uc;
+    document.documentElement.setAttribute("data-dense", String(ui.dense ?? 0));
+    if (ui.colMin){ document.documentElement.style.setProperty("--col-min", ui.colMin + "px"); }
+    const cw = document.getElementById("colWidth"); if (cw) cw.value = String(ui.colMin || 150);
   }
-  function loadUI(){ try { return JSON.parse(localStorage.getItem(UI_KEY) || "{}"); } catch(e){ return {}; } }
+  function loadUI(){
+    try {
+      const old = JSON.parse(localStorage.getItem("yams-ui") || "{}"); // migration depuis versions précédentes
+      const cur = JSON.parse(localStorage.getItem(UI_KEY) || "{}");
+      const dense = (old.uc === true && (cur.dense==null)) ? 1 : (cur.dense ?? 0);
+      return Object.assign({ scale: 1, dense, colMin: 150 }, cur);
+    } catch(e){ return { scale:1, dense:0, colMin:150 }; }
+  }
   function saveUI(ui){ try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch(e){} }
-  let uiState = Object.assign({ scale: 1, uc: false }, loadUI());
+  let uiState = loadUI();
   applyUI(uiState);
 
-  // Settings modal behavior
+  // Settings modal
   const settingsBtn = document.getElementById("settingsBtn");
   const backdrop = document.getElementById("backdrop");
   const modal = document.getElementById("settingsModal");
   const closeSettings = document.getElementById("closeSettings");
-
   function openSettings(){ backdrop.classList.add("open"); modal.classList.add("open"); }
   function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
   settingsBtn.addEventListener("click", openSettings);
@@ -288,7 +330,7 @@
   backdrop.addEventListener("click", closeSettingsModal);
   document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeSettingsModal(); });
 
-  // Theme radio in modal
+  // Theme radio
   document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
     r.addEventListener("change", ()=>{
       const mode = r.value;
@@ -299,23 +341,30 @@
   // Zoom buttons
   document.querySelectorAll('[data-zoom]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const val = btn.getAttribute('data-zoom');
-      uiState.scale = val;
-      applyUI(uiState);
-      saveUI(uiState);
+      uiState.scale = btn.getAttribute('data-zoom');
+      applyUI(uiState); saveUI(uiState);
     });
   });
-  // Ultra-compact toggle
-  document.getElementById("ucToggle").addEventListener('change', (e)=>{
-    uiState.uc = e.target.checked;
-    applyUI(uiState);
-    saveUI(uiState);
+  // Density buttons
+  document.querySelectorAll('[data-dense]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      uiState.dense = Number(btn.getAttribute('data-dense'));
+      applyUI(uiState); saveUI(uiState);
+    });
+  });
+  // Column width
+  document.getElementById("colWidth").addEventListener('change', (e)=>{
+    uiState.colMin = Number(e.target.value);
+    applyUI(uiState); saveUI(uiState);
   });
 
-  // Data model
+  // State
   let state = loadState() || { players: [] };
   function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+  let rounds = loadRounds();
+  function loadRounds(){ try{ return JSON.parse(localStorage.getItem(ROUNDS_KEY) || "[]"); } catch(e){ return []; } }
+  function saveRounds(){ try{ localStorage.setItem(ROUNDS_KEY, JSON.stringify(rounds)); } catch(e){} }
 
   function canonicalName(name){ return (name || "").trim().toLowerCase(); }
   function nameExists(name, exceptId=null){
@@ -387,8 +436,9 @@
 
     // Body rows
     tbody.innerHTML = "";
-    function addRow(label, key, hint, max, className=""){
+    function addRow(label, key, hint, max, className="", isLast=false){
       const tr = document.createElement("tr");
+      if (isLast) tr.classList.add("last-row");
       const tdCat = document.createElement("td");
       tdCat.className = "cat " + className;
       tdCat.innerHTML = `${label} ${hint?`<span class="muted">(${hint})</span>`:""}`;
@@ -401,7 +451,6 @@
           if (max != null){ input.placeholder = `0…${max}`; input.title = `Score max: ${max}`; }
           input.min = "0"; input.step = "1";
           input.value = p.scores[key];
-          // status color initial
           applyFillClass(input);
           input.addEventListener("keydown", (e)=>{ if (e.key === "ArrowUp" || e.key === "ArrowDown"){ e.preventDefault(); } });
           input.addEventListener("input", ()=>{
@@ -428,7 +477,7 @@
     addRow("Sous-total (1→6)", "_upper", "", null, "subtotal");
     addRow("Bonus (≥63)", "_bonus", "", null, "subtotal");
     CATS_LOWER.forEach(cat => addRow(cat.label, cat.key, cat.hint, cat.max));
-    addRow("Total", "_total", "", null, "total");
+    addRow("Total", "_total", "", null, "total", true);
 
     // Initialize computed cells
     state.players.forEach(p => refreshComputedForPlayer(p.id));
@@ -450,6 +499,10 @@
     if (n < min) n = min;
     if (n > max) n = max;
     return n;
+  }
+
+  function totalsForPlayer(p){
+    return totals(p.scores).total;
   }
 
   function refreshComputedForPlayer(playerId){
@@ -476,7 +529,16 @@
     setCellText(totalRow, colIdx, t.total, "total");
   }
 
-  // Leaderboard
+  // Leaderboard with avg & best from rounds
+  function getStatsForPlayer(id){
+    const scores = rounds.map(r => r.totals[id]).filter(v => typeof v === "number");
+    if (!scores.length) return {avg: null, best: null};
+    const sum = scores.reduce((a,b)=>a+b,0);
+    const avg = Math.round(sum / scores.length);
+    const best = Math.max(...scores);
+    return {avg, best};
+  }
+
   function renderLeaderboard(){
     const cont = document.getElementById("rankingPills");
     const hint = document.getElementById("leaderboardHint");
@@ -484,15 +546,17 @@
                               .sort((a,b)=> b.total - a.total);
     cont.innerHTML = "";
     data.forEach((r, i)=>{
+      const st = getStatsForPlayer(r.id);
+      const extra = (st.avg!=null && st.best!=null) ? ` (moy ${st.avg}, max ${st.best})` : "";
       const span = document.createElement("span");
       span.className = "rank-pill";
-      span.textContent = `${i+1}. ${r.name} — ${r.total}`;
+      span.textContent = `${i+1}. ${r.name} — ${r.total}${extra}`;
       cont.appendChild(span);
     });
     hint.textContent = state.players.length ? "" : "Ajoutez au moins un joueur pour démarrer.";
   }
 
-  // Add player / Reset
+  // Add / Reset
   document.getElementById("addPlayerBtn").addEventListener('click', ()=>{
     const nameInput = document.getElementById("playerName");
     const name = (nameInput.value || "").trim();
@@ -508,17 +572,69 @@
   });
   document.getElementById("resetAllBtn").addEventListener('click', ()=>{
     if (!state.players.length) return;
-    if (confirm("Effacer toutes les feuilles de score ?")){
-      state = { players: [] };
+    if (confirm("Effacer toutes les feuilles de score de la manche en cours ?")){
+      state.players.forEach(p => { Object.keys(p.scores).forEach(k => p.scores[k] = ""); });
       saveState(); buildTable(); renderLeaderboard();
     }
   });
 
-  // Settings: Export / Import / Clear cache
+  // Rounds: close & new & history
+  document.getElementById("closeRoundBtn").addEventListener('click', ()=>{
+    if (!state.players.length){ alert("Aucun joueur."); return; }
+    const totalsMap = {}; state.players.forEach(p => totalsMap[p.id] = totalsForPlayer(p));
+    const time = new Date().toISOString();
+    rounds.push({ time, totals: totalsMap });
+    saveRounds();
+    alert("Manche enregistrée !");
+    renderLeaderboard();
+  });
+  document.getElementById("newRoundBtn").addEventListener('click', ()=>{
+    if (!confirm("Commencer une nouvelle manche (réinitialise les scores en cours) ?")) return;
+    state.players.forEach(p => { Object.keys(p.scores).forEach(k => p.scores[k] = ""); });
+    saveState(); buildTable(); renderLeaderboard();
+  });
+
+  const historyModal = document.getElementById("historyModal");
+  const historyList = document.getElementById("historyList");
+  document.getElementById("openHistoryBtn").addEventListener('click', ()=>{
+    renderHistory();
+    backdrop.classList.add("open"); historyModal.classList.add("open");
+  });
+  document.getElementById("closeHistory").addEventListener('click', ()=>{
+    backdrop.classList.remove("open"); historyModal.classList.remove("open");
+  });
+  document.getElementById("clearHistoryBtn").addEventListener('click', ()=>{
+    if (!rounds.length) return;
+    if (!confirm("Effacer tout l’historique des manches ?")) return;
+    rounds = []; saveRounds(); renderHistory(); renderLeaderboard();
+  });
+
+  function renderHistory(){
+    historyList.innerHTML = "";
+    if (!rounds.length){
+      historyList.innerHTML = "<div class='muted' style='padding:8px'>Aucune manche enregistrée.</div>";
+      return;
+    }
+    rounds.slice().reverse().forEach((r, idx)=>{
+      const div = document.createElement("div");
+      div.className = "history-item";
+      const date = new Date(r.time).toLocaleString();
+      // Compose a small summary (top 3 players of that round):
+      const arr = Object.entries(r.totals).map(([id, t])=>{
+        const name = (state.players.find(p=>p.id===id)?.name) || "Joueur";
+        return {id, name, t: Number(t)||0};
+      }).sort((a,b)=>b.t-a.t).slice(0,3);
+      const summary = arr.map((x,i)=> `${i+1}. ${x.name} ${x.t}`).join(" • ");
+      div.innerHTML = `<div><strong>Manche</strong> — ${date}<br><span class="muted">${summary}</span></div>`;
+      historyList.appendChild(div);
+    });
+  }
+
+  // Export / Import / PDF / Clear cache
   document.getElementById("exportBtn").addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    const blob = new Blob([JSON.stringify({state, rounds}, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "yams-scores.json";
+    const a = document.createElement("a"); a.href = url; a.download = "yams-data.json";
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
   });
@@ -530,13 +646,15 @@
     reader.onload = ()=>{
       try{
         const data = JSON.parse(String(reader.result));
-        if (!data || !Array.isArray(data.players)) throw new Error("Format invalide");
-        state = data; saveState();
+        if (!data || !data.state || !Array.isArray(data.state.players)) throw new Error("Format invalide");
+        state = data.state; saveState();
+        rounds = Array.isArray(data.rounds) ? data.rounds : []; saveRounds();
         buildTable(); renderLeaderboard();
       }catch(err){ alert("Fichier invalide : " + err.message); }
     };
     reader.readAsText(file);
   });
+  document.getElementById("exportPdfBtn").addEventListener('click', ()=>{ window.print(); });
   document.getElementById("clearCacheBtn").addEventListener('click', async ()=>{
     if (!confirm("Vider le cache et redémarrer l’application ?")) return;
     try{
@@ -556,7 +674,7 @@
 
   // PWA SW (versioned filename to force update)
   if ("serviceWorker" in navigator){
-    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v7.js"));
+    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v8.js"));
   }
 })();
 </script>
