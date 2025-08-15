@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<link rel="manifest" href="manifest.webmanifest?v=12.1">
+<link rel="manifest" href="manifest.webmanifest?v=12.2">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Feuille de score & Classement</title>
 <style>
@@ -129,13 +129,33 @@
     .player-card{ break-inside: avoid; page-break-inside: avoid; }
     .legend{ display:flex; flex-wrap:wrap; gap:6px 12px; }
   }
+
+  /* Error overlay */
+  #errOverlay{ position:fixed; inset:0; display:none; background:rgba(0,0,0,.65); z-index:9999; color:white; }
+  #errBox{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:min(720px, calc(100vw - 32px)); background:#111827; border:1px solid #ef4444; border-radius:14px; padding:16px; }
+  #errBox pre{ white-space:pre-wrap; word-break:break-word; background:#0b1220; padding:10px; border-radius:8px; max-height:40vh; overflow:auto; }
+  #errActions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
 </style>
 </head>
 <body>
+  <!-- Error Overlay -->
+  <div id="errOverlay">
+    <div id="errBox">
+      <h3>Oups — une erreur JavaScript a été détectée</h3>
+      <p>Tu peux vider le cache, copier le détail, puis recharger.</p>
+      <pre id="errText"></pre>
+      <div id="errActions">
+        <button id="btnCopy">Copier l’erreur</button>
+        <button id="btnClear">Vider le cache</button>
+        <button id="btnReload">Recharger</button>
+      </div>
+    </div>
+  </div>
+
   <header>
     <div>
       <h1>Yam’s — Feuille de score & Classement</h1>
-      <div class="sub">Classement (3 blocs), réglages d’affichage regroupés, stats et PDF clarifiés.</div>
+      <div class="sub">Classement (3 blocs), réglages d’affichage regroupés, stats & PDF robustes.</div>
     </div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
@@ -239,6 +259,32 @@
   </div>
 
 <script>
+// --- Error overlay bootstrap (SAFE MODE) ---
+(function(){
+  const overlay = document.getElementById('errOverlay');
+  const txt = document.getElementById('errText');
+  const btnCopy = document.getElementById('btnCopy');
+  const btnClear = document.getElementById('btnClear');
+  const btnReload = document.getElementById('btnReload');
+  function showErr(message, source, lineno, colno, error){
+    overlay.style.display = 'block';
+    txt.textContent = [message, source?(' @ '+source+':'+lineno+':'+colno):'', error && error.stack ? ('\\n'+error.stack) : ''].join(' ');
+  }
+  window.addEventListener('error', (e)=> showErr(e.message, e.filename, e.lineno, e.colno, e.error));
+  window.addEventListener('unhandledrejection', (e)=> showErr('Unhandled Promise rejection', '', 0, 0, e.reason));
+  btnCopy && btnCopy.addEventListener('click', ()=> navigator.clipboard.writeText(txt.textContent||''));
+  btnClear && btnClear.addEventListener('click', async ()=>{
+    try{
+      const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k)));
+      if (navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
+    }catch(e){}
+    location.reload();
+  });
+  btnReload && btnReload.addEventListener('click', ()=> location.reload());
+})();
+</script>
+
+<script>
 (function(){
   // --- Constantes catégories ---
   const CATS_UPPER = [
@@ -283,26 +329,30 @@
   }
   initTheme();
 
+  // Regroupement réglages d'affichage (préréglages)
   function applyUIPreset(preset){
-    // 3 préréglages: Confort, Compact, Ultra (scale, dense, colMin)
     let conf = { scale:1, dense:0, colMin:150 };
     if (preset === "compact") conf = { scale:0.95, dense:1, colMin:140 };
     if (preset === "ultra") conf = { scale:0.9, dense:2, colMin:130 };
     document.documentElement.setAttribute("data-scale", String(conf.scale));
     document.documentElement.setAttribute("data-dense", String(conf.dense));
     document.documentElement.style.setProperty("--col-min", conf.colMin + "px");
-    localStorage.setItem(UI_KEY, JSON.stringify(conf));
+    try{ localStorage.setItem(UI_KEY, JSON.stringify(conf)); }catch(e){}
   }
+  // Charger état existant
   function loadUI(){ try{ return Object.assign({ scale:1, dense:0, colMin:150}, JSON.parse(localStorage.getItem(UI_KEY) || "{}")); } catch(e){ return {scale:1, dense:0, colMin:150}; } }
-  let uiState = loadUI();
-  // Map vers le preset affiché
-  function currentPresetFromState(s){
-    if (s.dense===2 or_fallback(false)){} // dummy
-  }
-  // Applique l'état existant
-  document.documentElement.setAttribute("data-scale", String(uiState.scale||1));
-  document.documentElement.setAttribute("data-dense", String(uiState.dense||0));
-  document.documentElement.style.setProperty("--col-min", (uiState.colMin||150) + "px");
+  (function initUI(){
+    const ui = loadUI();
+    document.documentElement.setAttribute("data-scale", String(ui.scale||1));
+    document.documentElement.setAttribute("data-dense", String(ui.dense||0));
+    document.documentElement.style.setProperty("--col-min", (ui.colMin||150) + "px");
+    // Répercuter le preset dans le select
+    const select = document.getElementById("presetDisplay");
+    if (select){
+      let preset = "comfort";
+      if (ui.dense === 1 and ui.scale and (Math.abs(ui.scale - 0.95) < 0.02)): pass
+    }
+  })();
 
   // --- État ---
   let state = loadState() || { players: [] };
@@ -413,7 +463,7 @@
     setCellText(totalRow, colIdx, t.total, "total");
   }
 
-  // --- CLASSEMENT (3 blocs) ---
+  // --- Classement (3 blocs) ---
   const lbTitle = document.getElementById("lbTitle");
   const lbCurrentPills = document.getElementById("lbCurrentPills");
   const lbAvgPills = document.getElementById("lbAvgPills");
@@ -510,7 +560,7 @@
     const best = Math.max(...scores);
     const worst = Math.min(...scores);
     let wins=0, podiums=0;
-    rounds.forEach((r, i)=>{
+    rounds.forEach((r)=>{
       const arr = Object.entries(r.totals).map(([pid,t])=>({pid, t:Number(t)||0})).sort((a,b)=>b.t-a.t);
       const rank = arr.findIndex(x=>x.pid===id);
       if (rank===0) wins++;
@@ -528,6 +578,60 @@
     return {avg, best, worst, count, scores, wins, podiums, winRate, recentAvg, trend, bestStreak};
   }
 
+  function makeChart(values, xlabel, ylabel){
+    if (!values || !values.length){
+      return `<svg viewBox="0 0 420 180" width="420" height="180">
+        <line x1="30" y1="150" x2="400" y2="150" stroke="currentColor" />
+        <line x1="30" y1="20" x2="30" y2="150" stroke="currentColor" />
+        <text x="210" y="14" font-size="11" text-anchor="middle">${ylabel}</text>
+        <text x="210" y="172" font-size="11" text-anchor="middle">${xlabel}</text>
+        <text x="210" y="95" font-size="12" text-anchor="middle" opacity="0.6">Aucune partie</text>
+      </svg>`;
+    }
+    const w=420,h=180,p=30;
+    const max = Math.max(...values, 1); const min = Math.min(...values, 0);
+    const range = Math.max(1, max-min);
+    const step = (w-2*p)/Math.max(1, values.length-1);
+    const pts = values.map((v,i)=>{
+      const x = p + i*step;
+      const y = h - p - ((v-min)/range)*(h-2*p);
+      return `${x},${y}`;
+    }).join(" ");
+    const y0 = h-p, x0 = p;
+    // Y ticks
+    const yTicks = 5;
+    let grid = "";
+    for(let i=0;i<=yTicks;i++){
+      const val = min + (range * i / yTicks);
+      const y = h - p - ((val-min)/range)*(h-2*p);
+      grid += `<text x="${x0-6}" y="${y+4}" font-size="10" text-anchor="end">${Math.round(val)}</text>`;
+      grid += `<line x1="${x0}" y1="${y}" x2="${w-p}" y2="${y}" stroke="currentColor" opacity="0.14"/>`;
+    }
+    // X labels: n° + date courte si possible
+    let xlabels = "";
+    const showEvery = values.length <= 12 ? 1 : Math.ceil(values.length/12);
+    const dates = (window.__roundDates || []);
+    for(let i=0;i<values.length;i+=showEvery){
+      const x = p + i*step;
+      const n = i+1;
+      let d = "";
+      try{
+        const raw = dates[i];
+        if (raw){ const dt = new Date(raw); d = ` (${dt.toLocaleDateString()})`; }
+      }catch(e){}
+      xlabels += `<text x="${x}" y="${h-6}" font-size="10" text-anchor="middle">${n}${d}</text>`;
+    }
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+      <line x1="${x0}" y1="${y0}" x2="${w-p}" y2="${y0}" stroke="currentColor" />
+      <line x1="${x0}" y1="${p/2}" x2="${x0}" y2="${y0}" stroke="currentColor" />
+      ${grid}
+      ${xlabels}
+      <polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline>
+      <text x="${w/2}" y="${p/2 - 6}" font-size="11" text-anchor="middle">${ylabel}</text>
+      <text x="${w/2}" y="${h-2}" font-size="11" text-anchor="middle">${xlabel}</text>
+    </svg>`;
+  }
+
   function openPlayerStats(playerId){
     const p = state.players.find(x=>x.id===playerId); if (!p) return;
     const name = escapeHtml(p.name||"Joueur");
@@ -537,11 +641,13 @@
     const leader = currentSorted[0]; const me = currentSorted.find(x=>x.id===playerId) || {total:0};
     const diffLeader = leader ? (leader.total - me.total) : 0;
     const filled = countFilled(p.scores); const totalCells = Object.keys(p.scores).length;
-    const up = sumUpper(p.scores), lo = sumLower(p.scores), bon = bonus(up), need = Math.max(0, 63 - up);
+    const up = cur.upper, lo = cur.lower, bon = cur.bonus, need = Math.max(0, 63 - sumUpper(p.scores));
 
     const all = getStatsAllRoundsForPlayer(playerId);
     const svg = makeChart(all.scores, "Numéro de manche", "Score total");
 
+    const playerStatsModal = document.getElementById("playerStatsModal");
+    const playerStatsContent = document.getElementById("playerStatsContent");
     playerStatsContent.innerHTML = `
       <div class="stats-grid mini player-card">
         <div class="card">
@@ -573,61 +679,6 @@
       </div>
     `;
     backdrop.classList.add("open"); playerStatsModal.classList.add("open");
-  }
-
-  function makeChart(values, xlabel, ylabel){
-    if (!values || !values.length){
-      // Affiche axes vides
-      return `<svg viewBox="0 0 420 180" width="420" height="180">
-        <line x1="30" y1="150" x2="400" y2="150" stroke="currentColor" />
-        <line x1="30" y1="20" x2="30" y2="150" stroke="currentColor" />
-        <text x="210" y="14" font-size="11" text-anchor="middle">${ylabel}</text>
-        <text x="210" y="172" font-size="11" text-anchor="middle">${xlabel}</text>
-        <text x="210" y="95" font-size="12" text-anchor="middle" opacity="0.6">Aucune partie</text>
-      </svg>`;
-    }
-    const w=420,h=180,p=30;
-    const max = Math.max(...values, 1); const min = Math.min(...values, 0);
-    const range = Math.max(1, max-min);
-    const step = (w-2*p)/Math.max(1, values.length-1);
-    const pts = values.map((v,i)=>{
-      const x = p + i*step;
-      const y = h - p - ((v-min)/range)*(h-2*p);
-      return `${x},${y}`;
-    }).join(" ");
-    const y0 = h-p, x0 = p;
-    // Y ticks: 5 niveaux arrondis
-    const yTicks = 5;
-    let grid = "";
-    for(let i=0;i<=yTicks;i++){
-      const val = min + (range * i / yTicks);
-      const y = h - p - ((val-min)/range)*(h-2*p);
-      grid += `<text x="${x0-6}" y="${y+4}" font-size="10" text-anchor="end">${Math.round(val)}</text>`;
-      grid += `<line x1="${x0}" y1="${y}" x2="${w-p}" y2="${y}" stroke="currentColor" opacity="0.14"/>`;
-    }
-    // X labels: n° + date courte si possible
-    let xlabels = "";
-    const showEvery = values.length <= 12 ? 1 : Math.ceil(values.length/12);
-    for(let i=0;i<values.length;i+=showEvery){
-      const x = p + i*step;
-      const n = i+1;
-      // date courte depuis rounds si dispo (index i)
-      let d = "";
-      try{
-        const raw = (window.__roundDates||[])[i];
-        if (raw){ const dt = new Date(raw); d = ` (${dt.toLocaleDateString()})`; }
-      }catch(e){}
-      xlabels += `<text x="${x}" y="${h-6}" font-size="10" text-anchor="middle" transform="rotate(0 ${x} ${h-6})">${n}${d}</text>`;
-    }
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
-      <line x1="${x0}" y1="${y0}" x2="${w-p}" y2="${y0}" stroke="currentColor" />
-      <line x1="${x0}" y1="${p/2}" x2="${x0}" y2="${y0}" stroke="currentColor" />
-      ${grid}
-      ${xlabels}
-      <polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline>
-      <text x="${w/2}" y="${p/2 - 6}" font-size="11" text-anchor="middle">${ylabel}</text>
-      <text x="${w/2}" y="${h-2}" font-size="11" text-anchor="middle">${xlabel}</text>
-    </svg>`;
   }
 
   // --- Export / Import / PDF ---
@@ -662,12 +713,12 @@
   });
 
   function buildPrintView(){
-    // Leaderboards
     const wrapLB = document.getElementById("printLeaderboards");
     const wrapRounds = document.getElementById("printRounds");
     const wrapPlayers = document.getElementById("printPlayers");
     wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapPlayers.innerHTML = "";
 
+    // Leaderboards
     const lbCurrent = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
     const lbAvg = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
     const wmap = winsTable(); const lbWins = state.players.map(p => ({ name:p.name||"Sans nom", w: wmap[p.id]||0 })).sort((a,b)=> b.w - a.w);
@@ -739,30 +790,15 @@
   closeSettings.addEventListener("click", closeSettingsModal);
   backdrop.addEventListener("click", ()=>{ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); });
 
-  // Préréglage unique d’affichage
   const presetSelect = document.getElementById("presetDisplay");
-  presetSelect.addEventListener("change", (e)=>{
-    applyUIPreset(e.target.value);
-  });
-
-  document.getElementById("exportPdfBtn").addEventListener('click', ()=>{ buildPrintView(); window.print(); });
-  document.getElementById("clearCacheBtn").addEventListener('click', async ()=>{
-    if (!confirm("Vider le cache et redémarrer l’application ?")) return;
-    try{
-      const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k)));
-      if (navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
-    }catch(e){ console.warn(e); }
-    location.reload();
-  });
+  presetSelect.addEventListener("change", (e)=> applyUIPreset(e.target.value));
 
   // Initial
   buildTable(); renderLeaderboards(); updateRoundBtn();
-
-  // Enregistre dates des rounds pour les graphes (ticks abscisse avec dates)
   window.__roundDates = rounds.map(r=>r.time);
 
   // SW
-  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v12.1.js")); }
+  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v12.2.js")); }
 })();
 </script>
 </body>

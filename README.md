@@ -1,1 +1,1 @@
-v7.4.1: Réglages d’affichage regroupés, retour classement 3 blocs, graphes avec abscisses numéros+dates et ordonnées claires, PDF sans manche actuelle, pas de saut de page par joueur.
+v7.4.2: SAFE MODE + corrections syntaxe, classements 3 blocs, préréglages d’affichage, PDF nettoyé.
