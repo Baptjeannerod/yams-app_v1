@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<link rel="manifest" href="manifest.webmanifest?v=12.3">
+<link rel="manifest" href="manifest.webmanifest?v=12.4">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Feuille de score & Classement</title>
 <style>
@@ -48,7 +48,6 @@
     display:flex; align-items:center; gap:12px;
   }
   h1{ font-size: clamp(20px, 2.6vw, 28px); margin:0; line-height:1.2; }
-  .sub{ color:var(--muted); font-size: .95rem; }
   .spacer{ flex:1; }
 
   main{ padding: 16px; display:grid; gap:16px; }
@@ -60,21 +59,14 @@
   }
   html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select { background:#111827; }
 
-  /* Classement (3 blocs) */
+  /* Classement unifié */
   .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px; display:grid; gap:10px; }
-  .lb-title{ display:flex; align-items:center; gap:8px; cursor:pointer; }
-  .lb-title .hint{ color:var(--muted); font-size:.9rem; }
-  .lb-grid{ display:grid; grid-template-columns: 1fr; gap:8px; }
-  .lb-block{ border:1px solid var(--border); border-radius:12px; padding:8px; }
-  .lb-block.highlight{ background: var(--hl); border-color: var(--hl-border); }
-  .lb-block h4{ margin:0 0 6px 0; font-size:1rem; }
-  .rank-pill{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; display:inline-block; margin:2px 6px 2px 0; }
-
-  .muted { color: var(--muted); }
+  .lb-head { display:flex; align-items:center; gap:10px; }
+  .lb-list span{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; display:inline-block; margin:2px 6px 2px 0; }
 
   /* Grille de saisie */
   .table-wrap{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); overflow: auto; }
-  table { width:100%; border-collapse: separate; border-spacing: 0; min-width: 760px; }
+  table { width:100%; border-collapse: separate; border-spacing: 0; min-width: 900px; }
   thead th{ position: sticky; top:0; z-index: 5; background: var(--sticky); border-bottom: 1px solid var(--border); text-align: center; }
   th, td{ padding: var(--dense-pad) 6px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); background-clip: padding-box; font-size: var(--dense-font); }
   th:last-child, td:last-child{ border-right: none; }
@@ -88,10 +80,14 @@
   .cell input[type="number"]{ width: var(--input-w); text-align:center; min-height:34px; margin: 0 auto; display:block; }
   .cell input.is-empty{ background: var(--danger); border-color: var(--danger-border); }
   .cell input.is-filled{ background: var(--success); border-color: var(--success-border); }
-  th:first-child, td:first-child{ position: sticky; left: 0; z-index: 4; background: var(--sticky); }
+
+  /* Sticky col: Catégorie (gauche) et Total (droite) */
+  th.first-col, td.first-col{ position: sticky; left: 0; z-index: 4; background: var(--sticky); }
+  th.total-col, td.total-col{ position: sticky; right: 0; z-index: 4; background: var(--sticky); }
   tr.last-row td{ position: sticky; bottom: 0; background: var(--sticky); z-index: 3; }
+
   .subtotal{ color: var(--muted); font-weight: 600; text-align:center; }
-  .total{ font-weight:800; text-align:center; }
+  .total-row{ font-weight:800; text-align:center; }
 
   .settings-btn{ margin-left:auto; width:40px; height:40px; display:grid; place-items:center; border-radius:10px; }
 
@@ -108,6 +104,7 @@
   .ghost-btn{ background: transparent; }
   .hidden-input{ display:none; }
   .danger-btn{ border-color: var(--danger-border); color: #7f1d1d; }
+  .muted { color: var(--muted); }
 
   /* Stats */
   .stats-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
@@ -155,7 +152,6 @@
   <header>
     <div>
       <h1>Yam’s — Feuille de score & Classement</h1>
-      <div class="sub">Classement (3 blocs), réglages d’affichage regroupés, stats & PDF robustes.</div>
     </div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
@@ -165,18 +161,21 @@
     <div class="toolbar">
       <input id="playerName" placeholder="Nom du joueur" />
       <button id="addPlayerBtn">Ajouter</button>
-      <button id="roundToggleBtn">Nouvelle manche</button>
+      <button id="roundToggleBtn">Clôturer la manche</button>
       <button id="openHistoryBtn">Historique</button>
     </div>
 
-    <!-- CLASSEMENT (retour à l’ancien système) -->
+    <!-- CLASSEMENT (unifié) -->
     <section class="leaderboard" id="leaderboard">
-      <div class="lb-title" id="lbTitle"><strong>Classement — appuie pour mettre en avant</strong> <span class="hint">Manche actuelle • Moyenne • Victoires</span></div>
-      <div class="lb-grid">
-        <div class="lb-block highlight" id="lb-current"><h4>Manche actuelle</h4><div id="lbCurrentPills"></div></div>
-        <div class="lb-block" id="lb-avg"><h4>Moyenne — toutes les manches</h4><div id="lbAvgPills"></div></div>
-        <div class="lb-block" id="lb-wins"><h4>Par victoires</h4><div id="lbWinsPills"></div></div>
+      <div class="lb-head">
+        <strong>Classement</strong>
+        <select id="lbView">
+          <option value="current">Manche actuelle</option>
+          <option value="avg">Toutes les manches (moyenne)</option>
+          <option value="wins">Victoires</option>
+        </select>
       </div>
+      <div class="lb-list" id="lbList"></div>
     </section>
 
     <!-- TABLEAU DE SAISIE -->
@@ -191,15 +190,16 @@
   <!-- Impression / PDF -->
   <div id="printView">
     <h1>Yam’s — Rapport des scores</h1>
-    <p><em>Classements, tableau des parties, fiches joueurs (sans manche actuelle).</em></p>
-
-    <h2>1) Classements</h2>
+    <h2>1) Classement</h2>
     <div id="printLeaderboards"></div>
 
-    <h2>2) Scores par partie</h2>
+    <h2>2) Totaux par partie</h2>
     <div id="printRounds"></div>
 
-    <h2>3) Fiches joueurs</h2>
+    <h2>3) Détail par manche (catégories × joueurs)</h2>
+    <div id="printRoundDetails"></div>
+
+    <h2>4) Fiches joueurs</h2>
     <div id="printPlayers"></div>
   </div>
 
@@ -220,13 +220,13 @@
     </div>
 
     <div class="section">
-      <h4>Affichage (préréglages)</h4>
+      <h4>Affichage</h4>
       <div class="row">
-        <label for="presetDisplay">Préréglage :</label>
+        <label for="presetDisplay">Taille/compacité :</label>
         <select id="presetDisplay">
-          <option value="comfort">Confort (par défaut)</option>
-          <option value="compact">Compact</option>
-          <option value="ultra">Ultra</option>
+          <option value="standard">Standard</option>
+          <option value="serre">Serré</option>
+          <option value="tres-serre">Très serré</option>
         </select>
       </div>
     </div>
@@ -240,6 +240,10 @@
         <button id="clearCacheBtn" class="danger-btn" title="Supprimer les caches et le service worker">Vider le cache</button>
         <input id="importFile" class="hidden-input" type="file" accept="application/json" />
       </div>
+    </div>
+
+    <div class="section">
+      <div class="muted">Version : v7.4.4</div>
     </div>
   </div>
 
@@ -261,33 +265,33 @@
 <script>
 // --- Error overlay bootstrap (SAFE MODE) ---
 (function(){
-  const overlay = document.getElementById('errOverlay');
-  const txt = document.getElementById('errText');
-  const btnCopy = document.getElementById('btnCopy');
-  const btnClear = document.getElementById('btnClear');
-  const btnReload = document.getElementById('btnReload');
+  var overlay = document.getElementById('errOverlay');
+  var txt = document.getElementById('errText');
+  var btnCopy = document.getElementById('btnCopy');
+  var btnClear = document.getElementById('btnClear');
+  var btnReload = document.getElementById('btnReload');
   function showErr(message, source, lineno, colno, error){
     overlay.style.display = 'block';
     txt.textContent = [message, source?(' @ '+source+':'+lineno+':'+colno):'', error && error.stack ? ('\n'+error.stack) : ''].join(' ');
   }
-  window.addEventListener('error', (e)=> showErr(e.message, e.filename, e.lineno, e.colno, e.error));
-  window.addEventListener('unhandledrejection', (e)=> showErr('Unhandled Promise rejection', '', 0, 0, e.reason));
-  btnCopy && btnCopy.addEventListener('click', ()=> navigator.clipboard.writeText(txt.textContent||''));
-  btnClear && btnClear.addEventListener('click', async ()=>{
+  window.addEventListener('error', function(e){ showErr(e.message, e.filename, e.lineno, e.colno, e.error); });
+  window.addEventListener('unhandledrejection', function(e){ showErr('Unhandled Promise rejection', '', 0, 0, e.reason); });
+  if (btnCopy) btnCopy.addEventListener('click', function(){ navigator.clipboard.writeText(txt.textContent||''); });
+  if (btnClear) btnClear.addEventListener('click', async function(){
     try{
-      const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k)));
-      if (navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
+      var keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      if (navigator.serviceWorker){ var regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
     }catch(e){}
     location.reload();
   });
-  btnReload && btnReload.addEventListener('click', ()=> location.reload());
+  if (btnReload) btnReload.addEventListener('click', function(){ location.reload(); });
 })();
 </script>
 
 <script>
 (function(){
   // --- Constantes catégories ---
-  const CATS_UPPER = [
+  var CATS_UPPER = [
     {key:'ones',   label:'1 ×', hint:'Somme des 1', max:5},
     {key:'twos',   label:'2 ×', hint:'Somme des 2', max:10},
     {key:'threes', label:'3 ×', hint:'Somme des 3', max:15},
@@ -295,7 +299,7 @@
     {key:'fives',  label:'5 ×', hint:'Somme des 5', max:25},
     {key:'sixes',  label:'6 ×', hint:'Somme des 6', max:30},
   ];
-  const CATS_LOER = [
+  var CATS_LOWER = [
     {key:'threeKind', label:'Brelan',        hint:'Somme des dés', max:30},
     {key:'fourKind',  label:'Carré',         hint:'Somme des dés', max:30},
     {key:'fullHouse', label:'Full',          hint:'25 pts',        max:25},
@@ -304,406 +308,407 @@
     {key:'yahtzee',   label:'Yam’s',         hint:'50 pts',        max:50},
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
-  const ALL_CATS = CATS_UPPER.concat(CATS_LOER);
+  var ALL_CATS = CATS_UPPER.concat(CATS_LOWER);
 
   // --- Clés de stockage ---
-  const STORAGE_KEY = "yams-app-pages-v6.1-table";
-  const ROUNDS_KEY = "yams-rounds-v7";
-  const ROUNDS_STATE_KEY = "yams-round-active";
-  const THEME_KEY = "yams-theme-mode";
-  const UI_KEY = "yams-ui-v7";
+  var STORAGE_KEY = "yams-app-pages-v6.1-table";
+  var ROUNDS_KEY = "yams-rounds-v7"; // ancienne structure
+  var ROUNDS2_KEY = "yams-rounds-v7-details"; // nouvelle structure avec détails catégories
+  var THEME_KEY = "yams-theme-mode";
+  var UI_KEY = "yams-ui-v7";
 
   // --- Thème & UI ---
-  const mql = window.matchMedia("(prefers-color-scheme: dark)");
+  var mql = window.matchMedia("(prefers-color-scheme: dark)");
   function applyTheme(mode){
-    let theme = mode; if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
+    var theme = mode; if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
     document.documentElement.setAttribute("data-theme", theme);
-    document.querySelectorAll('input[name="themeMode"]').forEach(r=> r.checked = (r.value === mode));
+    var radios = document.querySelectorAll('input[name="themeMode"]');
+    for (var i=0;i<radios.length;i++) radios[i].checked = (radios[i].value === mode);
   }
   function initTheme(){
-    const mode = localStorage.getItem(THEME_KEY) || "auto";
+    var mode = localStorage.getItem(THEME_KEY) || "auto";
     applyTheme(mode);
-    mql.addEventListener && mql.addEventListener("change", ()=>{
+    if (mql.addEventListener) mql.addEventListener("change", function(){
       if ((localStorage.getItem(THEME_KEY) || "auto") === "auto"){ applyTheme("auto"); }
     });
   }
   initTheme();
 
-  // Regroupement réglages d'affichage (préréglages)
+  // Préréglages d'affichage
   function applyUIPreset(preset){
-    let conf = { scale:1, dense:0, colMin:150 };
-    if (preset === "compact") conf = { scale:0.95, dense:1, colMin:140 };
-    if (preset === "ultra") conf = { scale:0.9, dense:2, colMin:130 };
+    var conf = { scale:1, dense:0, colMin:150 };
+    if (preset === "serre") conf = { scale:0.95, dense:1, colMin:140 };
+    if (preset === "tres-serre") conf = { scale:0.90, dense:2, colMin:130 };
     document.documentElement.setAttribute("data-scale", String(conf.scale));
     document.documentElement.setAttribute("data-dense", String(conf.dense));
     document.documentElement.style.setProperty("--col-min", conf.colMin + "px");
     try{ localStorage.setItem(UI_KEY, JSON.stringify(conf)); }catch(e){}
   }
-  // Charger état existant
-  function loadUI(){ try{ return Object.assign({ scale:1, dense:0, colMin:150}, JSON.parse(localStorage.getItem(UI_KEY) || "{}")); } catch(e){ return {scale:1, dense:0, colMin:150}; } }
+  function loadUI(){
+    try{ return Object.assign({ scale:1, dense:0, colMin:150}, JSON.parse(localStorage.getItem(UI_KEY) || "{}")); } catch(e){ return {scale:1, dense:0, colMin:150}; }
+  }
   (function initUI(){
-    const ui = loadUI();
+    var ui = loadUI();
     document.documentElement.setAttribute("data-scale", String(ui.scale||1));
     document.documentElement.setAttribute("data-dense", String(ui.dense||0));
     document.documentElement.style.setProperty("--col-min", (ui.colMin||150) + "px");
-    const select = document.getElementById("presetDisplay");
+    var select = document.getElementById("presetDisplay");
     if (select){
-      let preset = "comfort";
-      if (ui.dense === 1 && Math.abs(ui.scale - 0.95) < 0.02) preset = "compact";
-      if (ui.dense === 2 && ui.scale <= 0.91) preset = "ultra";
+      var preset = "standard";
+      if (ui.dense === 1 && Math.abs((ui.scale||1) - 0.95) < 0.02) preset = "serre";
+      if (ui.dense === 2 && (ui.scale||1) <= 0.91) preset = "tres-serre";
       select.value = preset;
       select.addEventListener("change", function(e){ applyUIPreset(e.target.value); });
     }
   })();
 
   // --- État ---
-  let state = loadState() || { players: [] };
-  function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
+  function loadState(){ try{ var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
-  let rounds = loadRounds();
+  var state = loadState() || { players: [] };
+
   function loadRounds(){ try{ return JSON.parse(localStorage.getItem(ROUNDS_KEY) || "[]"); } catch(e){ return []; } }
-  function saveRounds(){ try{ localStorage.setItem(ROUNDS_KEY, JSON.stringify(rounds)); } catch(e){} }
-  let roundActive = localStorage.getItem(ROUNDS_STATE_KEY) === "1";
+  function saveRounds(){ try{ localStorage.setItem(ROUNDS_KEY, JSON.stringify(roundsOld)); } catch(e){} }
+  var roundsOld = loadRounds();
+
+  function loadRounds2(){ try{ return JSON.parse(localStorage.getItem(ROUNDS2_KEY) || "[]"); } catch(e){ return []; } }
+  function saveRounds2(){ try{ localStorage.setItem(ROUNDS2_KEY, JSON.stringify(rounds)); } catch(e){} }
+  // Migration si besoin
+  var rounds = loadRounds2();
+  if (!rounds.length && roundsOld.length) {
+    rounds = roundsOld.map(function(r){ return { time:r.time, totals:r.totals, scores:{} }; });
+    saveRounds2();
+  }
 
   // --- Utilitaires ---
   function canonicalName(name){ return (name || "").trim().toLowerCase(); }
-  function nameExists(name, exceptId){ const cn = canonicalName(name); return state.players.some(function(p){ return canonicalName(p.name) === cn && p.id !== exceptId; }); }
-  function newPlayer(name){ const scores = {}; ALL_CATS.forEach(function(c){ scores[c.key] = ""; }); return { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()), name: name, scores: scores }; }
-  function num(v){ const n = Number(v); return isFinite(n) ? n : 0; }
-  function sumUpper(scores){ return CATS_UPPER.reduce(function(s,c){ return s + num(scores[c.key]||0); }, 0); }
-  function sumLower(scores){ return CATS_LOER.reduce(function(s,c){ return s + num(scores[c.key]||0); }, 0); }
+  function nameExists(name, exceptId){ var cn = canonicalName(name); return state.players.some(function(p){ return canonicalName(p.name) === cn && p.id !== exceptId; }); }
+  function newPlayer(name){ var scores = {}; for (var i=0;i<ALL_CATS.length;i++) scores[ALL_CATS[i].key] = ""; return { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()), name: name, scores: scores }; }
+  function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
+  function sumUpper(scores){ var s=0; for (var i=0;i<CATS_UPPER.length;i++) s += num(scores[CATS_UPPER[i].key]||0); return s; }
+  function sumLower(scores){ var s=0; for (var i=0;i<CATS_LOWER.length;i++) s += num(scores[CATS_LOWER[i].key]||0); return s; }
   function bonus(upper){ return upper >= 63 ? 35 : 0; }
-  function totals(scores){ const u = sumUpper(scores), b = bonus(u), l = sumLower(scores); return { upper:u, bonus:b, lower:l, total:u + b + l }; }
-  function escapeHtml(str){ return String(str).replace(/[&<>"']/g, function(s){ return ({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"})[s]; }); }
-  function countFilled(scores){ return Object.values(scores).filter(function(v){ return v !== "" && v != null; }).length; }
+  function totals(scores){ var u = sumUpper(scores), b = bonus(u), l = sumLower(scores); return { upper:u, bonus:b, lower:l, total:u + b + l }; }
+  function escapeHtml(str){ return String(str).replace(/[&<>\"']/g, function(s){ return {"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[s]; }); }
+  function countFilled(scores){ var c=0; for (var k in scores) if (scores[k]!=="" && scores[k]!=null) c++; return c; }
 
   // --- Table de saisie ---
-  const thead = document.getElementById("thead");
-  const tbody = document.getElementById("tbody");
+  var thead = document.getElementById("thead");
+  var tbody = document.getElementById("tbody");
 
   function buildTable(){
     thead.innerHTML = "";
-    const trHead = document.createElement("tr");
-    const thCat = document.createElement("th"); thCat.className = "cat"; thCat.textContent = "Catégorie"; trHead.appendChild(thCat);
+    var trHead = document.createElement("tr");
+    var thCat = document.createElement("th"); thCat.className = "cat first-col"; thCat.textContent = "Catégorie"; trHead.appendChild(thCat);
 
-    state.players.forEach(function(p){
-      const th = document.createElement("th");
-      th.className = "player"; th.dataset.playerId = p.id;
-      th.innerHTML = `<div class="player-head">
-        <span class="name">${escapeHtml(p.name || "Sans nom")}</span>
-        <button data-action="stats" title="Statistiques">📈</button>
-        <button data-action="rename" title="Renommer">✎</button>
-        <button data-action="delete" class="danger" title="Supprimer">✕</button>
-      </div>`;
-      th.querySelector('[data-action="stats"]').addEventListener('click', function(){ openPlayerStats(p.id); });
-      th.querySelector('[data-action="rename"]').addEventListener('click', function(){
-        const current = p.name || "";
-        const newName = prompt("Nouveau nom du joueur :", current);
-        if (newName !== null){
-          const trimmed = newName.trim();
-          if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
-          if (nameExists(trimmed, p.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
-          p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboards();
-        }
-      });
-      th.querySelector('[data-action="delete"]').addEventListener('click', function(){
-        if (confirm(`Supprimer ${p.name || "ce joueur"} ?`)){
-          state.players = state.players.filter(function(pl){ return pl.id !== p.id; }); saveState(); buildTable(); renderLeaderboards();
-        }
-      });
-      trHead.appendChild(th);
-    });
+    // Colonnes joueurs
+    for (var i=0;i<state.players.length;i++) {
+      (function(p){
+        var th = document.createElement("th");
+        th.className = "player"; th.dataset.playerId = p.id;
+        th.innerHTML = '<div class="player-head">\
+          <span class="name">'+escapeHtml(p.name || "Sans nom")+'</span>\
+          <button data-action="stats" title="Statistiques">📈</button>\
+          <button data-action="rename" title="Renommer">✎</button>\
+          <button data-action="delete" class="danger" title="Supprimer">✕</button>\
+        </div>';
+        th.querySelector('[data-action="stats"]').addEventListener('click', function(){ openPlayerStats(p.id); });
+        th.querySelector('[data-action="rename"]').addEventListener('click', function(){
+          var current = p.name || "";
+          var newName = prompt("Nouveau nom du joueur :", current);
+          if (newName !== null){
+            var trimmed = newName.trim();
+            if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
+            if (nameExists(trimmed, p.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
+            p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboard();
+          }
+        });
+        th.querySelector('[data-action="delete"]').addEventListener('click', function(){
+          if (confirm("Supprimer "+(p.name || "ce joueur")+" ?")){
+            state.players = state.players.filter(function(pl){ return pl.id !== p.id; }); saveState(); buildTable(); renderLeaderboard();
+          }
+        });
+        trHead.appendChild(th);
+      })(state.players[i]);
+    }
+
+    // Colonne Total (droite, sticky)
+    var thTotal = document.createElement("th"); thTotal.className = "total-col"; thTotal.textContent = "Total"; trHead.appendChild(thTotal);
     thead.appendChild(trHead);
 
+    // Corps
     tbody.innerHTML = "";
     function addRow(label, key, hint, max, className, isLast){
-      const tr = document.createElement("tr"); if (isLast) tr.classList.add("last-row");
-      const tdCat = document.createElement("td"); tdCat.className = "cat " + (className||""); tdCat.innerHTML = label + (hint?` <span class="muted">(${hint})</span>`:"");
-      tr.appendChild(tdCat);
-      state.players.forEach(function(p){
-        const td = document.createElement("td"); td.className = "cell " + (className||"");
+      var tr = document.createElement("tr"); if (isLast) tr.classList.add("last-row");
+      var tdCat = document.createElement("td"); tdCat.className = "cat first-col "+(className||""); tdCat.innerHTML = label + (hint? ' <span class="muted">('+hint+')</span>' : ''); tr.appendChild(tdCat);
+
+      for (var i=0;i<state.players.length;i++){ (function(p){
+        var td = document.createElement("td"); td.className = "cell "+(className||"");
         if (key.charAt(0) !== "_"){
-          const input = document.createElement("input"); input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
-          if (max != null){ input.placeholder = `0…${max}`; input.title = `Score max : ${max}`; }
+          var input = document.createElement("input");
+          input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
+          if (max != null){ input.placeholder = "0…"+max; input.title = "Score max : "+max; }
           input.min = "0"; input.step = "1"; input.value = p.scores[key];
           applyFillClass(input);
-          input.addEventListener("keydown", function(e){ if (e.key === "ArrowUp" || e.key === "ArrowDown"){ e.preventDefault(); } });
+          input.addEventListener("keydown", function(e){ if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault(); });
           input.addEventListener("input", function(){
-            const raw = input.value.replace(/[^\d]/g, ""); const v = raw === "" ? "" : clampInt(raw, 0, max != null ? max : 200);
-            if (String(v) !== input.value){ input.value = v; }
-            p.scores[key] = raw === "" ? "" : v; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboards();
+            var raw = String(input.value).replace(/[^\\d]/g, ""); var v = raw === "" ? "" : clampInt(raw, 0, (max!=null?max:200));
+            if (String(v) !== input.value) input.value = v;
+            p.scores[key] = (raw === "") ? "" : v; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboard();
           });
           td.appendChild(input);
         } else { td.textContent = ""; }
         tr.appendChild(td);
-      });
+      })(state.players[i]); }
+
+      // Cellule "Total" sticky (droite) — vide sauf pour la ligne Total
+      var tdTot = document.createElement("td"); tdTot.className = "total-col "+(className||""); tdTot.textContent = "";
+      tr.appendChild(tdTot);
+
       tbody.appendChild(tr);
     }
-    CATS_UPPER.forEach(function(cat){ addRow(cat.label, cat.key, cat.hint, cat.max); });
+
+    for (var i=0;i<CATS_UPPER.length;i++) addRow(CATS_UPPER[i].label, CATS_UPPER[i].key, CATS_UPPER[i].hint, CATS_UPPER[i].max);
     addRow("Sous-total (1→6)", "_upper", "", null, "subtotal");
     addRow("Bonus (≥63)", "_bonus", "", null, "subtotal");
-    CATS_LOER.forEach(function(cat){ addRow(cat.label, cat.key, cat.hint, cat.max); });
-    addRow("Total", "_total", "", null, "total", true);
+    for (var j=0;j<CATS_LOWER.length;j++) addRow(CATS_LOWER[j].label, CATS_LOWER[j].key, CATS_LOWER[j].hint, CATS_LOWER[j].max);
+    addRow("Total", "_total", "", null, "total-row", true);
 
-    state.players.forEach(function(p){ refreshComputedForPlayer(p.id); });
+    for (var k=0;k<state.players.length;k++) refreshComputedForPlayer(state.players[k].id);
   }
+
   function applyFillClass(input){ if (String(input.value).trim() === ""){ input.classList.add("is-empty"); input.classList.remove("is-filled"); } else { input.classList.remove("is-empty"); input.classList.add("is-filled"); } }
-  function clampInt(v, min, max){ let n = parseInt(v, 10); if (!isFinite(n)) n = 0; if (n < min) n = min; if (n > max) n = max; return n; }
+  function clampInt(v, min, max){ var n = parseInt(v, 10); if (!isFinite(n)) n = 0; if (n < min) n = min; if (n > max) n = max; return n; }
   function totalsForPlayer(p){ return totals(p.scores).total; }
+
   function refreshComputedForPlayer(playerId){
-    const p = state.players.find(function(x){ return x.id === playerId; }); if (!p) return;
-    const t = totals(p.scores);
-    const colIdx = state.players.findIndex(function(x){ return x.id === playerId; });
-    const rows = tbody.querySelectorAll("tr");
-    const upperCount = CATS_UPPER.length;
-    const subtotalRow = rows[upperCount];
-    const bonusRow = rows[upperCount + 1];
-    const totalRow = rows[upperCount + 1 + CATS_LOER.length + 1];
-    function setCellText(tr, idx, text, cls){ const td = tr.children[idx + 1]; if (!td) return; td.textContent = String(text); td.className = "cell " + (cls || ""); }
+    var p = null; for (var i=0;i<state.players.length;i++) if (state.players[i].id===playerId) { p = state.players[i]; break; } if (!p) return;
+    var t = totals(p.scores);
+    var colIdx = -1; for (var j=0;j<state.players.length;j++) if (state.players[j].id===playerId) { colIdx = j; break; }
+    var rows = tbody.querySelectorAll("tr");
+    var upperCount = CATS_UPPER.length;
+    var subtotalRow = rows[upperCount];
+    var bonusRow = rows[upperCount + 1];
+    var totalRow = rows[upperCount + 1 + CATS_LOWER.length + 1];
+    function setCellText(tr, idx, text, cls){
+      var td = tr.children[idx + 1]; if (!td) return; td.textContent = String(text); td.className = "cell " + (cls || "");
+    }
     setCellText(subtotalRow, colIdx, t.upper, "subtotal");
     setCellText(bonusRow, colIdx, t.bonus, "subtotal");
-    setCellText(totalRow, colIdx, t.total, "total");
+    setCellText(totalRow, colIdx, t.total, "total-row");
   }
 
-  // --- Classement (3 blocs) ---
-  const lbTitle = document.getElementById("lbTitle");
-  const lbCurrentPills = document.getElementById("lbCurrentPills");
-  const lbAvgPills = document.getElementById("lbAvgPills");
-  const lbWinsPills = document.getElementById("lbWinsPills");
-  const lbBlocks = ["lb-current","lb-avg","lb-wins"];
-  let hlIndex = 0;
-  lbTitle.addEventListener("click", function(){
-    document.getElementById(lbBlocks[hlIndex]).classList.remove("highlight"); hlIndex = (hlIndex + 1) % lbBlocks.length; document.getElementById(lbBlocks[hlIndex]).classList.add("highlight");
-  });
+  // --- Classement unifié ---
+  var lbList = document.getElementById("lbList");
+  var lbView = document.getElementById("lbView");
+  lbView.addEventListener("change", renderLeaderboard);
+
+  function renderLeaderboard(){
+    var view = lbView.value;
+    lbList.innerHTML = "";
+    if (view === "current"){
+      var cur = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
+      for (var i=0;i<cur.length;i++){ var s=document.createElement("span"); s.textContent=(i+1)+". "+cur[i].name+" — "+cur[i].total; lbList.appendChild(s); }
+    } else if (view === "avg"){
+      var arr = state.players.map(function(p){ var st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
+      for (var j=0;j<arr.length;j++){ var s2=document.createElement("span"); s2.textContent=(j+1)+". "+arr[j].name+" — moy "+arr[j].avg+" (max "+arr[j].best+")"; lbList.appendChild(s2); }
+    } else if (view === "wins"){
+      var wmap = winsTable();
+      var wr = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
+      for (var k=0;k<wr.length;k++){ var s3=document.createElement("span"); s3.textContent=(k+1)+". "+wr[k].name+" — "+wr[k].w+" vic."; lbList.appendChild(s3); }
+    }
+  }
 
   function winsTable(){
-    const wins = {}; state.players.forEach(function(p){ wins[p.id]=0; });
-    rounds.forEach(function(r){
-      let best = -Infinity, bestId=null;
-      Object.entries(r.totals).forEach(function(entry){
-        const id = entry[0], t = Number(entry[1])||0;
-        if (t>best){ best=t; bestId=id; }
-      });
-      if (bestId && wins[bestId] != null) wins[bestId]++;
-    });
+    var wins = {}; for (var i=0;i<state.players.length;i++) wins[state.players[i].id]=0;
+    for (var r=0;r<rounds.length;r++){ var best=-Infinity, bestId=null;
+      for (var pid in rounds[r].totals){ var v=Number(rounds[r].totals[pid])||0; if (v>best){ best=v; bestId=pid; } }
+      if (bestId && wins[bestId]!=null) wins[bestId]++;
+    }
     return wins;
   }
 
-  function renderLeaderboards(){
-    // Manche actuelle
-    lbCurrentPills.innerHTML = "";
-    const cur = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
-    cur.forEach(function(r,i){ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.total}`; lbCurrentPills.appendChild(s); });
-    // Moyenne
-    lbAvgPills.innerHTML = "";
-    const avg = state.players.map(function(p){ const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
-    avg.forEach(function(r,i){ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; lbAvgPills.appendChild(s); });
-    // Victoires
-    lbWinsPills.innerHTML = "";
-    const wmap = winsTable();
-    const wr = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
-    wr.forEach(function(r,i){ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.w} vic.`; lbWinsPills.appendChild(s); });
-  }
-
   // --- Historique ---
-  const historyModal = document.getElementById("historyModal");
-  const historyList = document.getElementById("historyList");
+  var historyModal = document.getElementById("historyModal");
+  var historyList = document.getElementById("historyList");
   document.getElementById("openHistoryBtn").addEventListener('click', function(){ renderHistory(); backdrop.classList.add("open"); historyModal.classList.add("open"); });
   document.getElementById("closeHistory").addEventListener('click', function(){ backdrop.classList.remove("open"); historyModal.classList.remove("open"); });
   document.getElementById("clearHistoryBtn").addEventListener('click', function(){
     if (!rounds.length) return; if (!confirm("Effacer tout l’historique des manches ?")) return;
-    rounds = []; saveRounds(); renderHistory(); renderLeaderboards();
+    rounds = []; saveRounds2(); renderHistory(); renderLeaderboard();
   });
   function renderHistory(){
     historyList.innerHTML = "";
     if (!rounds.length){ historyList.innerHTML = "<div class='muted' style='padding:8px'>Aucune manche enregistrée.</div>"; return; }
-    rounds.slice().reverse().forEach(function(r, idx){
-      const div = document.createElement("div"); div.className = "history-item";
-      const date = new Date(r.time).toLocaleString();
-      const arr = Object.entries(r.totals).map(function(ent){
-        const id = ent[0], t = ent[1]; const name = (state.players.find(function(p){ return p.id===id; })?.name) || "Joueur";
-        return {id:id, name:name, t:Number(t)||0};
+    for (var i=rounds.length-1, n=1; i>=0; i--, n++){ var r = rounds[i];
+      var div = document.createElement("div"); div.className = "history-item";
+      var date = new Date(r.time).toLocaleString();
+      var arr = Object.keys(r.totals).map(function(id){ 
+        var name = "Joueur"; for (var z=0;z<state.players.length;z++) if (state.players[z].id===id) { name = state.players[z].name || "Joueur"; break; }
+        return {id:id, name:name, t:Number(r.totals[id])||0};
       }).sort(function(a,b){ return b.t-a.t; }).slice(0,3);
-      const summary = arr.map(function(x,i){ return `${i+1}. ${x.name} ${x.t}`; }).join(" • ");
-      div.innerHTML = `<div><strong>Partie ${rounds.length - idx}</strong> — ${date}<br><span class="muted">${summary}</span></div>`;
+      var summary = arr.map(function(x, idx){ return (idx+1)+". "+x.name+" "+x.t; }).join(" • ");
+      div.innerHTML = "<div><strong>Partie "+(rounds.length - i)+"</strong> — "+date+"<br><span class='muted'>"+summary+"</span></div>";
       historyList.appendChild(div);
-    });
+    }
   }
 
-  // --- Bouton de manche unique ---
-  const roundToggleBtn = document.getElementById("roundToggleBtn");
-  function updateRoundBtn(){ roundToggleBtn.textContent = roundActive ? "Clôturer la manche" : "Nouvelle manche"; }
-  updateRoundBtn();
+  // --- Bouton unique Clôturer la manche ---
+  var roundToggleBtn = document.getElementById("roundToggleBtn");
   roundToggleBtn.addEventListener('click', function(){
-    if (!roundActive){
-      if (!confirm("Commencer une nouvelle manche ? (réinitialise les cases)")) return;
-      state.players.forEach(function(p){ Object.keys(p.scores).forEach(function(k){ p.scores[k] = ""; }); });
-      saveState(); buildTable(); renderLeaderboards();
-      roundActive = true; localStorage.setItem(ROUNDS_STATE_KEY, "1"); updateRoundBtn();
-    } else {
-      if (!state.players.length){ alert("Aucun joueur."); return; }
-      const totalsMap = {}; state.players.forEach(function(p){ totalsMap[p.id] = totalsForPlayer(p); });
-      rounds.push({ time: new Date().toISOString(), totals: totalsMap });
-      saveRounds(); alert("Manche enregistrée !");
-      roundActive = false; localStorage.setItem(ROUNDS_STATE_KEY, "0"); updateRoundBtn(); renderLeaderboards();
-    }
+    if (!state.players.length){ alert("Aucun joueur."); return; }
+    // Snapshot des scores détaillés + totaux
+    var totalsMap = {}; var scoresMap = {};
+    for (var i=0;i<state.players.length;i++){ var p = state.players[i]; totalsMap[p.id] = totals(p.scores).total; scoresMap[p.id] = Object.assign({}, p.scores); }
+    rounds.push({ time: new Date().toISOString(), totals: totalsMap, scores: scoresMap });
+    saveRounds2();
+    alert("Manche clôturée et enregistrée ! Nouvelle manche lancée.");
+    // Réinitialise les cases pour la nouvelle manche
+    for (var j=0;j<state.players.length;j++){ var q = state.players[j]; for (var k in q.scores) q.scores[k] = ""; }
+    saveState(); buildTable(); renderLeaderboard();
+    window.__roundDates = rounds.map(function(r){ return r.time; });
   });
 
   // --- Stats & graphiques ---
-  const playerStatsModal = document.getElementById("playerStatsModal");
-  const playerStatsContent = document.getElementById("playerStatsContent");
+  var playerStatsModal = document.getElementById("playerStatsModal");
+  var playerStatsContent = document.getElementById("playerStatsContent");
   document.getElementById("closePlayerStats").addEventListener('click', function(){ backdrop.classList.remove("open"); playerStatsModal.classList.remove("open"); });
 
   function getStatsAllRoundsForPlayer(id){
-    const scores = rounds.map(function(r){ return r.totals[id]; }).filter(function(v){ return typeof v === "number"; });
-    const count = scores.length;
+    var scores = []; for (var i=0;i<rounds.length;i++){ var v = rounds[i].totals[id]; if (typeof v === "number") scores.push(v); }
+    var count = scores.length;
     if (!count) return {avg:null, best:null, worst:null, count:0, scores:[], wins:0, podiums:0, winRate:0, recentAvg:null, trend:null, bestStreak:0};
-    const sum = scores.reduce(function(a,b){ return a+b; },0);
-    const avg = Math.round(sum / count);
-    const best = Math.max.apply(null, scores);
-    const worst = Math.min.apply(null, scores);
+    var sum=0; for (var a=0;a<scores.length;a++) sum+=scores[a];
+    var avg = Math.round(sum / count);
+    var best = Math.max.apply(null, scores);
+    var worst = Math.min.apply(null, scores);
     var wins=0, podiums=0;
-    rounds.forEach(function(r){
-      const arr = Object.entries(r.totals).map(function(ent){ return {pid:ent[0], t:Number(ent[1])||0}; }).sort(function(a,b){ return b.t-a.t; });
-      const rank = arr.findIndex(function(x){ return x.pid===id; });
+    for (var r=0;r<rounds.length;r++){ 
+      var arr = Object.keys(rounds[r].totals).map(function(pid){ return {pid:pid, t:Number(rounds[r].totals[pid])||0}; }).sort(function(x,y){ return y.t - x.t; });
+      var rank=-1; for (var m=0;m<arr.length;m++) if (arr[m].pid===id) { rank=m; break; }
       if (rank===0) wins++;
       if (rank>-1 && rank<3) podiums++;
-    });
-    const winRate = Math.round( (wins / count) * 100 );
-    const last5 = scores.slice(-5);
-    const recentAvg = Math.round(last5.reduce(function(a,b){ return a+b; },0)/last5.length);
-    const trend = recentAvg - avg;
+    }
+    var winRate = Math.round((wins / count) * 100);
+    var last5 = scores.slice(-5); var s5=0; for (var b=0;b<last5.length;b++) s5+=last5[b];
+    var recentAvg = last5.length ? Math.round(s5/last5.length) : null;
+    var trend = (recentAvg!=null ? recentAvg - avg : null);
     var bestStreak=0, cur=0;
-    rounds.forEach(function(r){
-      const arr = Object.entries(r.totals).map(function(ent){ return {pid:ent[0], t:Number(ent[1])||0}; }).sort(function(a,b){ return b.t-a.t; });
-      if (arr[0] && arr[0].pid===id){ cur++; if (cur>bestStreak) bestStreak=cur; } else { cur=0; }
-    });
+    for (var r2=0;r2<rounds.length;r2++){ 
+      var arr2 = Object.keys(rounds[r2].totals).map(function(pid){ return {pid:pid, t:Number(rounds[r2].totals[pid])||0}; }).sort(function(x,y){ return y.t - x.t; });
+      if (arr2[0] && arr2[0].pid===id){ cur++; if (cur>bestStreak) bestStreak=cur; } else cur=0;
+    }
     return {avg:avg, best:best, worst:worst, count:count, scores:scores, wins:wins, podiums:podiums, winRate:winRate, recentAvg:recentAvg, trend:trend, bestStreak:bestStreak};
   }
 
   function makeChart(values, xlabel, ylabel){
     if (!values || !values.length){
-      return `<svg viewBox="0 0 420 180" width="420" height="180">
-        <line x1="30" y1="150" x2="400" y2="150" stroke="currentColor" />
-        <line x1="30" y1="20" x2="30" y2="150" stroke="currentColor" />
-        <text x="210" y="14" font-size="11" text-anchor="middle">${ylabel}</text>
-        <text x="210" y="172" font-size="11" text-anchor="middle">${xlabel}</text>
-        <text x="210" y="95" font-size="12" text-anchor="middle" opacity="0.6">Aucune partie</text>
-      </svg>`;
+      return '<svg viewBox="0 0 420 180" width="420" height="180">\
+        <line x1="30" y1="150" x2="400" y2="150" stroke="currentColor" />\
+        <line x1="30" y1="20" x2="30" y2="150" stroke="currentColor" />\
+        <text x="210" y="14" font-size="11" text-anchor="middle">'+escapeHtml(ylabel)+'</text>\
+        <text x="210" y="172" font-size="11" text-anchor="middle">'+escapeHtml(xlabel)+'</text>\
+        <text x="210" y="95" font-size="12" text-anchor="middle" opacity="0.6">Aucune partie</text>\
+      </svg>';
     }
-    const w=420,h=180,p=30;
-    const max = Math.max.apply(null, values.concat([1])); const min = Math.min.apply(null, values.concat([0]));
-    const range = Math.max(1, max-min);
-    const step = (w-2*p)/Math.max(1, values.length-1);
-    let pts = "";
-    values.forEach(function(v,i){
-      const x = p + i*step;
-      const y = h - p - ((v-min)/range)*(h-2*p);
-      pts += (i?" ":"") + x + "," + y;
-    });
-    const y0 = h-p, x0 = p;
-    // Y ticks
-    const yTicks = 5;
-    let grid = "";
-    for(let i=0;i<=yTicks;i++){
-      const val = min + (range * i / yTicks);
-      const y = h - p - ((val-min)/range)*(h-2*p);
-      grid += `<text x="${x0-6}" y="${y+4}" font-size="10" text-anchor="end">${Math.round(val)}</text>`;
-      grid += `<line x1="${x0}" y1="${y}" x2="${w-p}" y2="${y}" stroke="currentColor" opacity="0.14"/>`;
+    var w=420,h=180,p=30;
+    var max = Math.max.apply(null, values.concat([1])); var min = Math.min.apply(null, values.concat([0]));
+    var range = Math.max(1, max-min);
+    var step = (w-2*p)/Math.max(1, values.length-1);
+    var pts = "";
+    for (var i=0;i<values.length;i++){ var v=values[i]; var x = p + i*step; var y = h - p - ((v-min)/range)*(h-2*p); pts += (i?" ":"") + x + "," + y; }
+    var y0 = h-p, x0 = p;
+    var yTicks = 5, grid = "";
+    for(var i2=0;i2<=yTicks;i2++){ var val = min + (range * i2 / yTicks); var y = h - p - ((val-min)/range)*(h-2*p);
+      grid += '<text x="'+(x0-6)+'" y="'+(y+4)+'" font-size="10" text-anchor="end">'+Math.round(val)+'</text>';
+      grid += '<line x1="'+x0+'" y1="'+y+'" x2="'+(w-p)+'" y2="'+y+'" stroke="currentColor" opacity="0.14"/>';
     }
-    // X labels: n° + date courte si possible
-    let xlabels = "";
-    const showEvery = values.length <= 12 ? 1 : Math.ceil(values.length/12);
-    const dates = (window.__roundDates || []);
-    for(let i=0;i<values.length;i+=showEvery){
-      const x = p + i*step;
-      const n = i+1;
-      let d = "";
-      try{
-        const raw = dates[i];
-        if (raw){ const dt = new Date(raw); d = ` (${dt.toLocaleDateString()})`; }
-      }catch(e){}
-      xlabels += `<text x="${x}" y="${h-6}" font-size="10" text-anchor="middle">${n}${d}</text>`;
+    var xlabels = "";
+    var showEvery = values.length <= 12 ? 1 : Math.ceil(values.length/12);
+    var dates = (window.__roundDates || []);
+    for(var j=0;j<values.length;j+=showEvery){
+      var x = p + j*step; var n = j+1; var d = "";
+      try{ var raw = dates[j]; if (raw){ var dt = new Date(raw); d = " ("+dt.toLocaleDateString()+")"; } }catch(e){}
+      xlabels += '<text x="'+x+'" y="'+(h-6)+'" font-size="10" text-anchor="middle">'+n+d+'</text>';
     }
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
-      <line x1="${x0}" y1="${y0}" x2="${w-p}" y2="${y0}" stroke="currentColor" />
-      <line x1="${x0}" y1="${p/2}" x2="${x0}" y2="${y0}" stroke="currentColor" />
-      ${grid}
-      ${xlabels}
-      <polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline>
-      <text x="${w/2}" y="${p/2 - 6}" font-size="11" text-anchor="middle">${ylabel}</text>
-      <text x="${w/2}" y="${h-2}" font-size="11" text-anchor="middle">${xlabel}</text>
-    </svg>`;
+    return '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'">\
+      <line x1="'+x0+'" y1="'+y0+'" x2="'+(w-p)+'" y2="'+y0+'" stroke="currentColor" />\
+      <line x1="'+x0+'" y1="'+(p/2)+'" x2="'+x0+'" y2="'+y0+'" stroke="currentColor" />\
+      '+grid+'\
+      '+xlabels+'\
+      <polyline fill="none" stroke="currentColor" stroke-width="2" points="'+pts+'"></polyline>\
+      <text x="'+(w/2)+'" y="'+(p/2 - 6)+'" font-size="11" text-anchor="middle">'+escapeHtml(ylabel)+'</text>\
+      <text x="'+(w/2)+'" y="'+(h-2)+'" font-size="11" text-anchor="middle">'+escapeHtml(xlabel)+'</text>\
+    </svg>';
   }
 
   function openPlayerStats(playerId){
-    const p = state.players.find(function(x){ return x.id===playerId; }); if (!p) return;
-    const name = escapeHtml(p.name||"Joueur");
-    const cur = totals(p.scores);
-    const currentSorted = state.players.map(function(x){ return {id:x.id, total: totals(x.scores).total}; }).sort(function(a,b){ return b.total-a.total; });
-    const rank = (currentSorted.findIndex(function(x){ return x.id===playerId; }) + 1) || "-";
-    const leader = currentSorted[0]; const me = currentSorted.find(function(x){ return x.id===playerId; }) || {total:0};
-    const diffLeader = leader ? (leader.total - me.total) : 0;
-    const filled = countFilled(p.scores); const totalCells = Object.keys(p.scores).length;
-    const up = cur.upper, lo = cur.lower, bon = cur.bonus, need = Math.max(0, 63 - sumUpper(p.scores));
+    var p = null; for (var i=0;i<state.players.length;i++) if (state.players[i].id===playerId) { p = state.players[i]; break; } if (!p) return;
+    var name = escapeHtml(p.name||"Joueur");
+    var cur = totals(p.scores);
+    var currentSorted = state.players.map(function(x){ return {id:x.id, total: totals(x.scores).total}; }).sort(function(a,b){ return b.total-a.total; });
+    var rank = "-"; for (var r=0;r<currentSorted.length;r++) if (currentSorted[r].id===playerId) { rank = (r+1); break; }
+    var leader = currentSorted[0]; var me = null; for (var i2=0;i2<currentSorted.length;i2++) if (currentSorted[i2].id===playerId) { me = currentSorted[i2]; break; } var diffLeader = leader ? (leader.total - (me?me.total:0)) : 0;
+    var filled = countFilled(p.scores); var totalCells = ALL_CATS.length;
+    var up = cur.upper, lo = cur.lower, bon = cur.bonus, need = Math.max(0, 63 - sumUpper(p.scores));
 
-    const all = getStatsAllRoundsForPlayer(playerId);
-    const svg = makeChart(all.scores, "Numéro de manche", "Score total");
+    var all = getStatsAllRoundsForPlayer(playerId);
+    var svg = makeChart(all.scores, "Numéro de manche", "Score total");
 
-    playerStatsContent.innerHTML = `
-      <div class="stats-grid mini player-card">
-        <div class="card">
-          <h4>Manche actuelle — ${name}</h4>
-          <div class="kv">
-            <b>Total</b><span>${cur.total} (Haut ${up}+${bon}, Bas ${lo})</span>
-            <b>Rang</b><span>${rank} / ${state.players.length} — Écart 1er: ${diffLeader>0?`-${diffLeader}`:"—"}</span>
-            <b>Remplissage</b><span>${filled}/${totalCells} — Bonus 63: ${bon?`✅`:`❌ (${need} pts)`}</span>
-          </div>
-        </div>
-        <div class="card">
-          <h4>Toutes les manches — ${name}</h4>
-          <div class="kv">
-            <b>Parties</b><span>${all.count}</span>
-            <b>Victoires</b><span>${all.wins} (${all.winRate}%)</span>
-            <b>Podiums</b><span>${all.podiums}</span>
-            <b>Moyenne</b><span>${all.avg ?? "-"}</span>
-            <b>Meilleur / Pire</b><span>${all.best ?? "-"} / ${all.worst ?? "-"}</span>
-            <b>5 dernières</b><span>${all.recentAvg ?? "-"}</span>
-            <b>Tendance</b><span>${all.trend>0?`+${all.trend}`:all.trend}</span>
-            <b>Série (wins)</b><span>${all.bestStreak}</span>
-          </div>
-          <div class="chart">${svg}</div>
-          <div class="legend" style="display:flex;flex-wrap:wrap;gap:8px 12px;">
-            <span>Abscisse = <em>n° de manche</em> (et date courte)</span>
-            <span>Ordonnée = <em>score total</em></span>
-          </div>
-        </div>
-      </div>
-    `;
+    var html = '\
+      <div class="stats-grid mini player-card">\
+        <div class="card">\
+          <h4>Manche actuelle — '+name+'</h4>\
+          <div class="kv">\
+            <b>Total</b><span>'+cur.total+' (Haut '+up+'+'+bon+', Bas '+lo+')</span>\
+            <b>Rang</b><span>'+rank+' / '+state.players.length+' — Écart 1er: '+(diffLeader>0?('-'+diffLeader):'—')+'</span>\
+            <b>Remplissage</b><span>'+filled+'/'+totalCells+' — Bonus 63: '+(bon?'✅':'❌ ('+need+' pts)')+'</span>\
+          </div>\
+        </div>\
+        <div class="card">\
+          <h4>Toutes les manches — '+name+'</h4>\
+          <div class="kv">\
+            <b>Parties</b><span>'+ (all.count||0) +'</span>\
+            <b>Victoires</b><span>'+ (all.wins||0) +' ('+ (all.winRate||0) +'%)</span>\
+            <b>Podiums</b><span>'+ (all.podiums||0) +'</span>\
+            <b>Moyenne</b><span>'+ (all.avg!=null?all.avg:'-') +'</span>\
+            <b>Meilleur / Pire</b><span>'+ (all.best!=null?all.best:'-') +' / '+ (all.worst!=null?all.worst:'-') +'</span>\
+            <b>5 dernières</b><span>'+ (all.recentAvg!=null?all.recentAvg:'-') +'</span>\
+            <b>Tendance</b><span>'+ (all.trend!=null?(all.trend>0?('+'+all.trend):all.trend):'-') +'</span>\
+            <b>Série (wins)</b><span>'+ (all.bestStreak||0) +'</span>\
+          </div>\
+          <div class="chart">'+svg+'</div>\
+          <div class="legend" style="display:flex;flex-wrap:wrap;gap:8px 12px;">\
+            <span>Abscisse = <em>n° de manche</em> (et date courte)</span>\
+            <span>Ordonnée = <em>score total</em></span>\
+          </div>\
+        </div>\
+      </div>';
+    playerStatsContent.innerHTML = html;
     backdrop.classList.add("open"); playerStatsModal.classList.add("open");
   }
 
   // --- Export / Import / PDF ---
   document.getElementById("exportBtn").addEventListener('click', function(){
-    const payload = { etat: state, historique_manches: rounds };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "yams-donnees.json";
+    var payload = { etat: state, historique_manches: rounds };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = "yams-donnees.json";
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
   });
-  const importFile = document.getElementById("importFile");
+  var importFile = document.getElementById("importFile");
   document.getElementById("importBtn").addEventListener('click', function(){ importFile.click(); });
   importFile.addEventListener('change', function(){
-    const file = importFile.files && importFile.files[0]; if (!file) return;
-    const reader = new FileReader();
+    var file = importFile.files && importFile.files[0]; if (!file) return;
+    var reader = new FileReader();
     reader.onload = function(){
       try{
-        const data = JSON.parse(String(reader.result));
+        var data = JSON.parse(String(reader.result));
         if (!data || !data.etat || !Array.isArray(data.etat.players)) throw new Error("Format invalide");
         state = data.etat; saveState();
-        rounds = Array.isArray(data.historique_manches) ? data.historique_manches : []; saveRounds();
-        buildTable(); renderLeaderboards(); updateRoundBtn();
+        rounds = Array.isArray(data.historique_manches) ? data.historique_manches : []; saveRounds2();
+        buildTable(); renderLeaderboard();
       }catch(err){ alert("Fichier invalide : " + err.message); }
     };
     reader.readAsText(file);
@@ -715,105 +720,122 @@
   });
 
   function buildPrintView(){
-    const wrapLB = document.getElementById("printLeaderboards");
-    const wrapRounds = document.getElementById("printRounds");
-    const wrapPlayers = document.getElementById("printPlayers"); wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapPlayers.innerHTML = "";
+    var wrapLB = document.getElementById("printLeaderboards");
+    var wrapRounds = document.getElementById("printRounds");
+    var wrapRoundDetails = document.getElementById("printRoundDetails");
+    var wrapPlayers = document.getElementById("printPlayers");
+    wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapPlayers.innerHTML = ""; wrapRoundDetails.innerHTML = "";
 
-    // Leaderboards
-    const lbCurrent = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
-    const lbAvg = state.players.map(function(p){ const st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
-    const wmap = winsTable(); const lbWins = state.players.map(function(p){ return { name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
+    // Leaderboard
+    var lbCurrent = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
+    var lbAvg = state.players.map(function(p){ var st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
+    var wmap = winsTable(); var lbWins = state.players.map(function(p){ return { name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
+    wrapLB.innerHTML = '\
+      <div><strong>Manche actuelle :</strong> '+ (lbCurrent.map(function(r,i){ return (i+1)+". "+r.name+" — "+r.total; }).join(" • ") || "<em>Aucun joueur</em>") +'</div>\
+      <div><strong>Moyenne (toutes manches) :</strong> '+ (lbAvg.map(function(r,i){ return (i+1)+". "+r.name+" — moy "+r.avg+" (max "+r.best+")"; }).join(" • ") || "<em>Aucun joueur</em>") +'</div>\
+      <div><strong>Par victoires :</strong> '+ (lbWins.map(function(r,i){ return (i+1)+". "+r.name+" — "+r.w+" vic."; }).join(" • ") || "<em>Aucun joueur</em>") +'</div>';
 
-    wrapLB.innerHTML = `
-      <div><strong>Manche actuelle :</strong> ${lbCurrent.map(function(r,i){ return `${i+1}. ${r.name} — ${r.total}`; }).join(" • ") || "<em>Aucun joueur</em>"}</div>
-      <div><strong>Moyenne (toutes manches) :</strong> ${lbAvg.map(function(r,i){ return `${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; }).join(" • ") || "<em>Aucun joueur</em>"}</div>
-      <div><strong>Par victoires :</strong> ${lbWins.map(function(r,i){ return `${i+1}. ${r.name} — ${r.w} vic.`; }).join(" • ") || "<em>Aucun joueur</em>"}</div>
-    `;
-
-    // Rounds table + stocke dates pour graphiques
-    const players = state.players;
+    // Totaux par partie
+    var players = state.players.slice();
     window.__roundDates = rounds.map(function(r){ return r.time; });
-    const head = `<tr><th>Partie</th>${players.map(function(p){ return `<th>${escapeHtml(p.name||"Joueur")}</th>`; }).join("")}</tr>`;
-    const rows = rounds.map(function(r,i){
-      const date = new Date(r.time).toLocaleString();
-      const tds = players.map(function(p){ return `<td style="text-align:right">${(r.totals[p.id] != null ? r.totals[p.id] : "")}</td>`; }).join(""); return `<tr><td>${i+1} — ${date}</td>${tds}</tr>`;
-    }).join(""); wrapRounds.innerHTML = `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||`<tr><td colspan='${players.length+1}'><em>Aucune partie</em></td></tr>`}</table>`;
+    var head = '<tr><th>Partie</th>'+players.map(function(p){ return '<th>'+escapeHtml(p.name||"Joueur")+'</th>'; }).join("")+'</tr>';
+    var rowsHtml = "";
+    for (var i=0;i<rounds.length;i++){ var r = rounds[i]; var date = new Date(r.time).toLocaleString();
+      var tds = players.map(function(p){ var v = (r.totals[p.id] != null ? r.totals[p.id] : ""); return '<td style="text-align:right">'+v+'</td>'; }).join("");
+      rowsHtml += '<tr><td>'+(i+1)+' — '+date+'</td>'+tds+'</tr>';
+    }
+    if (!rowsHtml) rowsHtml = "<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>";
+    wrapRounds.innerHTML = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">'+head+rowsHtml+'</table>';
 
-    // Player cards (sans "manche actuelle")
-    let statsHtml = "";
-    state.players.forEach(function(p){
-      const all = getStatsAllRoundsForPlayer(p.id);
-      const svg = makeChart(all.scores, "Numéro de manche", "Score total");
-      statsHtml += `<div class="player-card" style="margin:8px 0;padding:8px;border:1px solid #999">
-        <strong>${escapeHtml(p.name||"Joueur")}</strong>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div>
-            <u>Toutes les manches</u><br>
-            Moyenne ${all.avg??"-"} • Meilleur ${all.best??"-"} • Pire ${all.worst??"-"}<br>
-            Parties ${all.count} • Victoires ${all.wins} (${all.winRate}%) • Podiums ${all.podiums}<br>
-            5 dernières ${all.recentAvg??"-"} • Tendance ${all.trend>0?`+${all.trend}`:all.trend} • Série ${all.bestStreak}
-          </div>
-          <div>
-            ${svg}
-            <div class="legend" style="font-size:12px;color:#555;display:flex;flex-wrap:wrap;gap:6px 12px;">
-              <span>Abscisse&nbsp;: n° de manche (date courte)</span>
-              <span>Ordonnée&nbsp;: score total</span>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    });
+    // Détail par manche (catégories)
+    var detailAll = "";
+    for (var rIdx=0;rIdx<rounds.length;rIdx++){ var R = rounds[rIdx];
+      var header = '<tr><th>Catégorie</th>'+players.map(function(p){ return '<th>'+escapeHtml(p.name||"Joueur")+'</th>'; }).join("")+'</tr>';
+      var rowsD = "";
+      for (var c=0;c<ALL_CATS.length;c++){ var cat = ALL_CATS[c]; var tds='';
+        for (var pi=0;pi<players.length;pi++){ var pid = players[pi].id; var sv = (R.scores && R.scores[pid] && (R.scores[pid][cat.key]!==undefined) ? R.scores[pid][cat.key] : ""); tds += '<td style="text-align:center">'+(sv===" "?"":sv)+'</td>'; }
+        rowsD += '<tr><td>'+cat.label+'</td>'+tds+'</tr>';
+      }
+      detailAll += '<div style="margin:10px 0;page-break-inside:avoid"><strong>Partie '+(rIdx+1)+' — '+ new Date(R.time).toLocaleString() +'</strong><br>'+
+                   '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">'+header+rowsD+'</table></div>';
+    }
+    wrapRoundDetails.innerHTML = detailAll || "<em>Aucune partie</em>";
+
+    // Fiches joueurs
+    var statsHtml = "";
+    for (var pIdx=0;pIdx<state.players.length;pIdx++){ var p = state.players[pIdx]; var all = getStatsAllRoundsForPlayer(p.id); var svg = makeChart(all.scores, "Numéro de manche", "Score total");
+      statsHtml += '<div class="player-card" style="margin:8px 0;padding:8px;border:1px solid #999">\
+        <strong>'+escapeHtml(p.name||"Joueur")+'</strong>\
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">\
+          <div>\
+            <u>Toutes les manches</u><br>\
+            Moyenne '+(all.avg!=null?all.avg:"-")+' • Meilleur '+(all.best!=null?all.best:"-")+' • Pire '+(all.worst!=null?all.worst:"-")+'<br>\
+            Parties '+(all.count||0)+' • Victoires '+(all.wins||0)+' ('+(all.winRate||0)+'%) • Podiums '+(all.podiums||0)+'<br>\
+            5 dernières '+(all.recentAvg!=null?all.recentAvg:"-")+' • Tendance '+(all.trend!=null?(all.trend>0?("+"+all.trend):all.trend):"-")+' • Série '+(all.bestStreak||0)+'\
+          </div>\
+          <div>\
+            '+svg+'\
+            <div class="legend" style="font-size:12px;color:#555;display:flex;flex-wrap:wrap;gap:6px 12px;">\
+              <span>Abscisse&nbsp;: n° de manche (date courte)</span>\
+              <span>Ordonnée&nbsp;: score total</span>\
+            </div>\
+          </div>\
+        </div>\
+      </div>';
+    }
     wrapPlayers.innerHTML = statsHtml;
   }
 
   // --- UI : ajouter joueur & réglages ---
   document.getElementById("addPlayerBtn").addEventListener('click', function(){
-    const nameInput = document.getElementById("playerName"); const name = (nameInput.value || "").trim();
+    var nameInput = document.getElementById("playerName");
+    var name = (nameInput.value || "").trim();
     if (!name){ alert("Entrez un nom de joueur."); nameInput.focus(); return; }
     if (nameExists(name)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
-    const p = newPlayer(name);
+    var p = newPlayer(name);
     state.players.push(p);
-    saveState(); buildTable(); renderLeaderboards();
+    saveState(); buildTable(); renderLeaderboard();
     nameInput.value = "";
   });
   document.getElementById("playerName").addEventListener('keydown', function(e){ if (e.key === "Enter") document.getElementById("addPlayerBtn").click(); });
 
-  const settingsBtn = document.getElementById("settingsBtn");
-  const backdrop = document.getElementById("backdrop");
-  const modal = document.getElementById("settingsModal");
-  const closeSettings = document.getElementById("closeSettings");
+  var settingsBtn = document.getElementById("settingsBtn");
+  var backdrop = document.getElementById("backdrop");
+  var modal = document.getElementById("settingsModal");
+  var closeSettings = document.getElementById("closeSettings");
   function openSettings(){ backdrop.classList.add("open"); modal.classList.add("open"); }
   function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
   settingsBtn.addEventListener("click", openSettings);
   closeSettings.addEventListener("click", closeSettingsModal);
   backdrop.addEventListener("click", function(){ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); });
 
-  const presetSelect = document.getElementById("presetDisplay");
+  var presetSelect = document.getElementById("presetDisplay");
   presetSelect.addEventListener("change", function(e){ applyUIPreset(e.target.value); });
 
   // Initial
-  buildTable(); renderLeaderboards(); updateRoundBtn();
+  buildTable(); renderLeaderboard();
   window.__roundDates = rounds.map(function(r){ return r.time; });
 
   // Thème manuel/auto
-  document.querySelectorAll('input[name="themeMode"]').forEach(function(radio){
-    radio.addEventListener('change', function(e){
-      try{ localStorage.setItem(THEME_KEY, e.target.value); }catch(err){}
-      applyTheme(e.target.value);
-    });
+  var radios = document.querySelectorAll('input[name="themeMode"]');
+  for (var i=0;i<radios.length;i++) radios[i].addEventListener('change', function(e){
+    try{ localStorage.setItem(THEME_KEY, e.target.value); }catch(err){}
+    applyTheme(e.target.value);
   });
 
   // Boutons de données / cache
   document.getElementById("clearCacheBtn").addEventListener('click', async function(){
     try{
-      const keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); }));
-      if (navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
+      var keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      if (navigator.serviceWorker){ var regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
       alert("Caches et SW supprimés. Recharge la page.");
     }catch(e){ alert("Impossible de vider les caches : " + e.message); }
   });
 
   // SW
-  if ("serviceWorker" in navigator){ window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw-v12.3.js"); }); }
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw-v12.4.js"); });
+  }
 })();
 </script>
 </body>

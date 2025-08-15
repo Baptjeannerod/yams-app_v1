@@ -1,1 +1,1 @@
-v7.4.3: JS pur (aucun 'and'/'or'), overlay d’erreur, classements 3 blocs, préréglages, PDF propre. SW/manifest 12.3.
+Version v7.4.4 SAFE: classement unifié, colonnes Catégorie/Total fixées, UI allégée, version en réglages, presets renommés, bouton unique Clôturer (relance auto), sauvegarde détaillée des manches, PDF avec détail par manche, SW 12.4.
