@@ -1,0 +1,1 @@
+v6: Vue tableau compacte, en-tête collant, thème/zoom/export/import/vider cache. Déployer sur GitHub Pages.
