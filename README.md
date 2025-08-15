@@ -1,1 +1,0 @@
-Déployez sur GitHub Pages. v5: nouveau Réglages, Zoom, Joueurs par ligne, bouton Vider le cache, SW v4.
