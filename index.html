@@ -6,7 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Yam’s — Yam’s PWA</title>
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Yam’s — Scores & Classement</title>
 <style>
   :root{
     --gap:14px; --radius:16px;
@@ -16,8 +17,15 @@
     --danger: rgba(239,68,68,.35); --danger-text:#7f1d1d;
     --notice: rgba(59,130,246,.45); --notice-text:#1e3a8a;
   }
+  html[data-theme="dark"]{
+    --bg:#0f172a; --panel:#0b1220; --text:#e2e8f0; --muted:#94a3b8;
+    --border: rgba(148,163,184,.25); --row-alt: rgba(2,6,23,.35);
+    --accent-soft: rgba(59,130,246,.15); --accent-border: rgba(59,130,246,.35);
+    --danger: rgba(239,68,68,.5); --danger-text:#fecaca;
+    --notice: rgba(59,130,246,.5); --notice-text:#bfdbfe;
+  }
   html, body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial; }
-  header { position: sticky; top: 0; z-index: 10; backdrop-filter: saturate(180%) blur(6px);
+  header { position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(180%) blur(6px);
     padding: max(12px, env(safe-area-inset-top)) 16px 12px 16px; background: color-mix(in oklab, var(--panel) 85%, transparent); border-bottom:1px solid var(--border);
     display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
   }
@@ -27,9 +35,9 @@
   .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
   button, input{
     background:#fff; color:var(--text); border:1px solid var(--border); padding:12px 14px; border-radius:12px; outline:none;
-    min-height:44px; /* Apple HIG tap target */
-    font-size:18px; /* prevent iOS zoom */
+    min-height:44px; font-size:18px;
   }
+  html[data-theme="dark"] button, html[data-theme="dark"] input { background:#111827; }
   input[type="number"]{ width: 110px; text-align: right; -moz-appearance: textfield; }
   input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .players { display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:16px; }
@@ -52,31 +60,36 @@
   .danger{ border-color: var(--danger); color: var(--danger-text); }
   .notice{ border-color: var(--notice); color: var(--notice-text); }
   .footer { color: var(--muted); font-size:16px; text-align:center; padding:12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-  .theme-toggle{ display:flex; align-items:center; gap:8px; border:1px solid var(--border); padding:8px 12px; border-radius:999px; cursor:pointer; user-select:none; background:#fff; }
-  .ios-tip{ color: var(--muted); font-size: 15px; }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#0f172a; --panel:#0b1220; --text:#e2e8f0; --muted:#94a3b8;
-      --border: rgba(148,163,184,.25); --row-alt: rgba(2,6,23,.35);
-      --accent-soft: rgba(59,130,246,.15); --accent-border: rgba(59,130,246,.35);
-      --danger: rgba(239,68,68,.5); --danger-text:#fecaca;
-      --notice: rgba(59,130,246,.5); --notice-text:#bfdbfe;
-    }
-    button, input, .theme-toggle { background: #111827; }
+  .menu { position: relative; }
+  .menu-panel{
+    position: absolute; right:0; top: calc(100% + 8px); background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; min-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 30;
+    display:none;
   }
+  .menu-panel.open { display:block; }
+  .menu-panel h3{ margin: 0 0 8px 0; font-size: 1rem; }
+  .radio-row{ display:flex; align-items:center; gap:10px; padding:6px 0; }
+  .kbd-closer{ font-size: 15px; }
 </style>
-<link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
   <header>
     <div>
-      <h1>Yam’s — Score iPad</h1>
-      <div class="sub">Gros boutons, saisie sans zoom, classement instantané. 🌗 Jour/Nuit auto (suivant l’iPad).</div>
-      <div class="ios-tip">Astuce: pour ajouter à l’écran d’accueil depuis Safari: <strong>Partager</strong> → <strong>Sur l’écran d’accueil</strong>.</div>
+      <h1>Yam’s — Scores & Classement</h1>
+      <div class="sub">Saisie fluide, limites par catégorie, PWA iPad-friendly.</div>
     </div>
     <div class="toolbar">
+      <div class="menu">
+        <button id="settingsBtn">Réglages ⚙️</button>
+        <div class="menu-panel" id="settingsPanel" role="dialog" aria-modal="true">
+          <h3>Thème</h3>
+          <div class="radio-row"><input type="radio" name="themeMode" id="themeAuto" value="auto"><label for="themeAuto">Auto (suivre l’appareil)</label></div>
+          <div class="radio-row"><input type="radio" name="themeMode" id="themeLight" value="light"><label for="themeLight">Clair</label></div>
+          <div class="radio-row"><input type="radio" name="themeMode" id="themeDark" value="dark"><label for="themeDark">Sombre</label></div>
+        </div>
+      </div>
       <input id="playerName" placeholder="Nom du joueur" />
       <button id="addPlayerBtn">Ajouter</button>
+      <button id="closeKbBtn" class="kbd-closer" title="Fermer le clavier">Fermer le clavier</button>
       <button id="resetAllBtn">Tout réinitialiser</button>
       <button id="exportBtn">Exporter</button>
       <button id="importBtn">Importer</button>
@@ -114,12 +127,60 @@
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
   const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
-  const STORAGE_KEY = "yams-app-ipad-v5";
+  const STORAGE_KEY = "yams-app-pages-v2";
+  const THEME_KEY = "yams-theme-mode"; // 'auto' | 'light' | 'dark'
 
+  /** Theme handling **/
+  const mql = window.matchMedia("(prefers-color-scheme: dark)");
+  function applyTheme(mode){
+    let theme = mode;
+    if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
+    document.documentElement.setAttribute("data-theme", theme);
+    // Set radio UI
+    const id = mode === "auto" ? "themeAuto" : (mode === "dark" ? "themeDark" : "themeLight");
+    const el = document.getElementById(id); if (el) el.checked = true;
+  }
+  function initTheme(){
+    let mode = localStorage.getItem(THEME_KEY) || "auto";
+    applyTheme(mode);
+    // respond to system changes only in auto
+    mql.addEventListener && mql.addEventListener("change", ()=>{
+      if ((localStorage.getItem(THEME_KEY) || "auto") === "auto"){
+        applyTheme("auto");
+      }
+    });
+  }
+  initTheme();
+
+  // Settings menu
+  const settingsBtn = document.getElementById("settingsBtn");
+  const settingsPanel = document.getElementById("settingsPanel");
+  settingsBtn.addEventListener("click", ()=>{
+    settingsPanel.classList.toggle("open");
+  });
+  document.addEventListener("click", (e)=>{
+    if (!settingsPanel.contains(e.target) && e.target !== settingsBtn){
+      settingsPanel.classList.remove("open");
+    }
+  });
+  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
+    r.addEventListener("change", ()=>{
+      const mode = r.value; // auto/light/dark
+      try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
+      applyTheme(mode);
+    });
+  });
+
+  // State
   let state = loadState() || { players: [] };
-
   function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
+  function canonicalName(name){ return (name || "").trim().toLowerCase(); }
+  function nameExists(name, exceptId=null){
+    const cn = canonicalName(name);
+    return state.players.some(p => canonicalName(p.name) === cn && p.id !== exceptId);
+  }
 
   function newPlayer(name){
     const scores = {}; ALL_CATS.forEach(c => scores[c.key] = "");
@@ -136,7 +197,6 @@
     const u = sumUpper(scores), b = bonus(u), l = sumLower(scores);
     return { upper:u, bonus:b, lower:l, total:u + b + l };
   }
-
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
   }
@@ -166,10 +226,14 @@
     table.appendChild(tbody); wrap.appendChild(table);
 
     head.querySelector('[data-action="rename"]').addEventListener('click', ()=>{
-      const newName = prompt("Nouveau nom du joueur :", player.name || "");
+      const current = player.name || "";
+      const newName = prompt("Nouveau nom du joueur :", current);
       if (newName !== null){
-        player.name = newName.trim();
-        head.querySelector(".name").textContent = player.name || "Sans nom";
+        const trimmed = newName.trim();
+        if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
+        if (nameExists(trimmed, player.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
+        player.name = trimmed;
+        head.querySelector(".name").textContent = player.name;
         saveState(); renderLeaderboard();
       }
     });
@@ -248,6 +312,7 @@
     const nameInput = document.getElementById("playerName");
     const name = (nameInput.value || "").trim();
     if (!name){ alert("Entrez un nom de joueur."); nameInput.focus(); return; }
+    if (nameExists(name)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
     const p = newPlayer(name);
     state.players.push(p);
     saveState();
@@ -255,6 +320,15 @@
     renderLeaderboard();
     nameInput.value = "";
   });
+
+  // Close keyboard button + tap outside to blur
+  function blurActive(){ if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+  document.getElementById("closeKbBtn").addEventListener("click", blurActive);
+  document.addEventListener("touchstart", (e)=>{
+    const insideInput = e.target.closest("input, button, .menu-panel");
+    if (!insideInput){ blurActive(); }
+  }, {passive:true});
+
   document.getElementById("playerName").addEventListener('keydown', (e)=>{
     if (e.key === "Enter") document.getElementById("addPlayerBtn").click();
   });
@@ -295,7 +369,12 @@
   // First paint
   renderAllPlayers();
   renderLeaderboard();
+
+  // PWA SW
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw.js"));
+  }
 })();
 </script>
-<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"))}</script></body>
+</body>
 </html>
