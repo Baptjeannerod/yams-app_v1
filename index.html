@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest?v=9">
+<link rel="manifest" href="manifest.webmanifest?v=10">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Scores & Classement</title>
 <style>
@@ -59,8 +59,6 @@
     min-height:40px; font-size:1rem; cursor:pointer;
   }
   html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select { background:#111827; }
-  .btn-tab { border-radius:999px; padding:8px 12px; }
-  .btn-tab[aria-pressed="true"]{ background:var(--accent-soft); border-color:var(--accent-border); }
 
   .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   .rank-pill{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; }
@@ -99,9 +97,7 @@
   .cell input.is-empty{ background: var(--danger); border-color: var(--danger-border); }
   .cell input.is-filled{ background: var(--success); border-color: var(--success-border); }
 
-  th:first-child, td:first-child{
-    position: sticky; left: 0; z-index: 4; background: var(--sticky);
-  }
+  th:first-child, td:first-child{ position: sticky; left: 0; z-index: 4; background: var(--sticky); }
   tr.last-row td{ position: sticky; bottom: 0; background: var(--sticky); z-index: 3; }
 
   .subtotal{ color: var(--muted); font-weight: 600; text-align:center; }
@@ -132,13 +128,24 @@
   .danger-btn{ border-color: var(--danger-border); color: #7f1d1d; }
   .toggle{ display:flex; align-items:center; gap:10px; }
 
+  /* Popover carousel for ranking modes */
+  .popover{
+    position:absolute; background: var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:8px; box-shadow: 0 12px 30px rgba(0,0,0,.22);
+    display:none; z-index:60;
+  }
+  .popover.open{ display:block; }
+  .carousel{ display:flex; align-items:center; gap:8px; }
+  .carousel .item{ padding:6px 10px; border-radius:10px; border:1px solid var(--border); white-space:nowrap; }
+  .carousel .item.active{ background: var(--accent-soft); border-color: var(--accent-border); font-weight:700; }
+
   /* Stats modal */
   .stats-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
   .card{ border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--panel); }
   .card h4{ margin:0 0 8px 0; }
   .chart{ width:100%; height:140px; }
 
-  /* Print (PDF) */
+  /* Print view */
   #printView{ display:none; }
   @media print{
     @page{ size: A4 landscape; margin: 12mm; }
@@ -155,7 +162,7 @@
   <header>
     <div>
       <h1>Yam’s — Scores & Classement</h1>
-      <div class="sub">Classement par manche / global, stats par joueur, export PDF enrichi.</div>
+      <div class="sub">Classement unifié (carousel), bouton de manche intelligent, stats avancées & export PDF riche.</div>
     </div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
@@ -165,20 +172,22 @@
     <div class="toolbar">
       <input id="playerName" placeholder="Nom du joueur" />
       <button id="addPlayerBtn">Ajouter</button>
-      <button id="resetAllBtn">Tout réinitialiser</button>
-      <button id="closeRoundBtn">Clôturer la manche</button>
-      <button id="newRoundBtn">Nouvelle manche</button>
+      <button id="roundToggleBtn">Nouvelle manche</button>
       <button id="openHistoryBtn">Historique</button>
-      <span class="spacer"></span>
-      <span>Classement :</span>
-      <button id="rankCurrent" class="btn-tab" aria-pressed="true">Manche actuelle</button>
-      <button id="rankAll" class="btn-tab" aria-pressed="false">Toutes les manches</button>
     </div>
 
     <section class="leaderboard" id="leaderboard">
-      <strong id="leaderboardTitle">Classement — Manche actuelle</strong>
+      <strong id="leaderboardTitle" style="cursor:pointer" title="Changer le type de classement">Classement — Manche actuelle</strong>
       <div id="rankingPills"></div>
       <span class="muted" id="leaderboardHint"></span>
+      <!-- popover for mode carousel -->
+      <div id="rankPopover" class="popover" role="dialog" aria-label="Changer le type de classement">
+        <div class="carousel">
+          <span class="item" data-mode="current">Manche actuelle</span>
+          <span class="item" data-mode="overall_avg">Toutes les manches (moyenne)</span>
+          <span class="item" data-mode="overall_wins">Classement par victoires</span>
+        </div>
+      </div>
     </section>
 
     <div class="table-wrap">
@@ -285,20 +294,22 @@
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
   const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
-  const STORAGE_KEY = "yams-app-pages-v6.1-table";
-  const ROUNDS_KEY = "yams-rounds-v7";
+
+  const STORAGE_KEY = "yams-app-pages-v6.1-table"; // compat scores en cours
+  const ROUNDS_KEY = "yams-rounds-v7"; // historique des manches
+  const ROUNDS_STATE_KEY = "yams-round-active"; // bool "1"/"0"
   const THEME_KEY = "yams-theme-mode";
   const UI_KEY = "yams-ui-v7";
 
+  // Theme & UI
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
   function applyTheme(mode){
-    let theme = mode;
-    if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
+    let theme = mode; if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
     document.documentElement.setAttribute("data-theme", theme);
     document.querySelectorAll('input[name="themeMode"]').forEach(r=> r.checked = (r.value === mode));
   }
   function initTheme(){
-    let mode = localStorage.getItem(THEME_KEY) || "auto";
+    const mode = localStorage.getItem(THEME_KEY) || "auto";
     applyTheme(mode);
     mql.addEventListener && mql.addEventListener("change", ()=>{
       if ((localStorage.getItem(THEME_KEY) || "auto") === "auto"){ applyTheme("auto"); }
@@ -313,101 +324,50 @@
     if (ui.colMin){ document.documentElement.style.setProperty("--col-min", ui.colMin + "px"); }
     const cw = document.getElementById("colWidth"); if (cw) cw.value = String(ui.colMin || 150);
   }
-  function loadUI(){
-    try {
-      const cur = JSON.parse(localStorage.getItem(UI_KEY) || "{}");
-      return Object.assign({ scale: 1, dense:0, colMin:150 }, cur);
-    } catch(e){ return { scale:1, dense:0, colMin:150 }; }
-  }
-  function saveUI(ui){ try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch(e){} }
-  let uiState = loadUI();
-  applyUI(uiState);
+  function loadUI(){ try{ return Object.assign({ scale:1, dense:0, colMin:150}, JSON.parse(localStorage.getItem(UI_KEY) || "{}")); } catch(e){ return {scale:1, dense:0, colMin:150}; } }
+  function saveUI(ui){ try{ localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch(e){} }
+  let uiState = loadUI(); applyUI(uiState);
 
-  const settingsBtn = document.getElementById("settingsBtn");
-  const backdrop = document.getElementById("backdrop");
-  const modal = document.getElementById("settingsModal");
-  const closeSettings = document.getElementById("closeSettings");
-  function openSettings(){ backdrop.classList.add("open"); modal.classList.add("open"); }
-  function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
-  settingsBtn.addEventListener("click", openSettings);
-  closeSettings.addEventListener("click", closeSettingsModal);
-  backdrop.addEventListener("click", closeSettingsModal);
-  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeSettingsModal(); });
-
-  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
-    r.addEventListener("change", ()=>{
-      const mode = r.value;
-      try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
-      applyTheme(mode);
-    });
-  });
-  document.querySelectorAll('[data-zoom]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      uiState.scale = btn.getAttribute('data-zoom');
-      applyUI(uiState); saveUI(uiState);
-    });
-  });
-  document.querySelectorAll('[data-dense]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      uiState.dense = Number(btn.getAttribute('data-dense'));
-      applyUI(uiState); saveUI(uiState);
-    });
-  });
-  document.getElementById("colWidth").addEventListener('change', (e)=>{
-    uiState.colMin = Number(e.target.value);
-    applyUI(uiState); saveUI(uiState);
-  });
-
+  // State
   let state = loadState() || { players: [] };
   function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
   let rounds = loadRounds();
   function loadRounds(){ try{ return JSON.parse(localStorage.getItem(ROUNDS_KEY) || "[]"); } catch(e){ return []; } }
   function saveRounds(){ try{ localStorage.setItem(ROUNDS_KEY, JSON.stringify(rounds)); } catch(e){} }
+  let roundActive = localStorage.getItem(ROUNDS_STATE_KEY) === "1";
 
+  // Helpers
   function canonicalName(name){ return (name || "").trim().toLowerCase(); }
-  function nameExists(name, exceptId=null){
-    const cn = canonicalName(name);
-    return state.players.some(p => canonicalName(p.name) === cn && p.id !== exceptId);
-  }
-  function newPlayer(name){
-    const scores = {}; ALL_CATS.forEach(c => scores[c.key] = "");
-    return { id: crypto.randomUUID(), name, scores };
-  }
+  function nameExists(name, exceptId=null){ const cn = canonicalName(name); return state.players.some(p => canonicalName(p.name) === cn && p.id !== exceptId); }
+  function newPlayer(name){ const scores = {}; ALL_CATS.forEach(c => scores[c.key] = ""); return { id: crypto.randomUUID(), name, scores }; }
   function num(v){ const n = Number(v); return isFinite(n) ? n : 0; }
   function sumUpper(scores){ return CATS_UPPER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
   function sumLower(scores){ return CATS_LOWER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
   function bonus(upper){ return upper >= 63 ? 35 : 0; }
-  function totals(scores){
-    const u = sumUpper(scores), b = bonus(u), l = sumLower(scores);
-    return { upper:u, bonus:b, lower:l, total:u + b + l };
-  }
-  function escapeHtml(str){
-    return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&gt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
+  function totals(scores){ const u = sumUpper(scores), b = bonus(u), l = sumLower(scores); return { upper:u, bonus:b, lower:l, total:u + b + l }; }
+  function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"}[s])); }
+  function countFilled(scores){ return Object.values(scores).filter(v => v !== "" && v != null).length; }
+  function categoryProgress(scores){
+    // progression % par rapport au max possible par catégorie (0..1)
+    let sum=0, maxSum=0;
+    CATS_UPPER.forEach(c=>{ const v=num(scores[c.key]); sum += v; maxSum += c.max; });
+    CATS_LOWER.forEach(c=>{ const v=num(scores[c.key]); sum += v; maxSum += c.max; });
+    return maxSum ? sum/maxSum : 0;
   }
 
+  // Build table
   const thead = document.getElementById("thead");
   const tbody = document.getElementById("tbody");
-
-  // Ranking mode
-  let rankingMode = "current"; // "current" | "all"
-  const rankCurrentBtn = document.getElementById("rankCurrent");
-  const rankAllBtn = document.getElementById("rankAll");
-  rankCurrentBtn.addEventListener('click', ()=>{ rankingMode="current"; rankCurrentBtn.setAttribute("aria-pressed","true"); rankAllBtn.setAttribute("aria-pressed","false"); renderLeaderboard(); });
-  rankAllBtn.addEventListener('click', ()=>{ rankingMode="all"; rankCurrentBtn.setAttribute("aria-pressed","false"); rankAllBtn.setAttribute("aria-pressed","true"); renderLeaderboard(); });
 
   function buildTable(){
     thead.innerHTML = "";
     const trHead = document.createElement("tr");
-    const thCat = document.createElement("th");
-    thCat.className = "cat";
-    thCat.textContent = "Catégorie";
-    trHead.appendChild(thCat);
+    const thCat = document.createElement("th"); thCat.className = "cat"; thCat.textContent = "Catégorie"; trHead.appendChild(thCat);
 
     state.players.forEach(p => {
       const th = document.createElement("th");
-      th.className = "player";
-      th.dataset.playerId = p.id;
+      th.className = "player"; th.dataset.playerId = p.id;
       th.innerHTML = `<div class="player-head">
         <span class="name">${escapeHtml(p.name || "Sans nom")}</span>
         <button data-action="stats" title="Stats">📈</button>
@@ -422,59 +382,42 @@
           const trimmed = newName.trim();
           if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
           if (nameExists(trimmed, p.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
-          p.name = trimmed;
-          th.querySelector(".name").textContent = p.name;
-          saveState(); renderLeaderboard();
+          p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboard();
         }
       });
       th.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
         if (confirm(`Supprimer ${p.name || "ce joueur"} ?`)){
-          state.players = state.players.filter(pl => pl.id !== p.id);
-          saveState(); buildTable(); renderLeaderboard();
+          state.players = state.players.filter(pl => pl.id !== p.id); saveState(); buildTable(); renderLeaderboard();
         }
       });
       trHead.appendChild(th);
     });
-
     thead.appendChild(trHead);
 
     tbody.innerHTML = "";
     function addRow(label, key, hint, max, className="", isLast=false){
-      const tr = document.createElement("tr");
-      if (isLast) tr.classList.add("last-row");
-      const tdCat = document.createElement("td");
-      tdCat.className = "cat " + className;
-      tdCat.innerHTML = `${label} ${hint?`<span class="muted">(${hint})</span>`:""}`;
-      tr.appendChild(tdCat);
+      const tr = document.createElement("tr"); if (isLast) tr.classList.add("last-row");
+      const tdCat = document.createElement("td"); tdCat.className = "cat " + className; tdCat.innerHTML = `${label} ${hint?`<span class="muted">(${hint})</span>`:""}`; tr.appendChild(tdCat);
       state.players.forEach(p => {
         const td = document.createElement("td"); td.className = "cell " + className;
         if (key[0] !== "_"){
           const input = document.createElement("input");
           input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
           if (max != null){ input.placeholder = `0…${max}`; input.title = `Score max: ${max}`; }
-          input.min = "0"; input.step = "1";
-          input.value = p.scores[key];
+          input.min = "0"; input.step = "1"; input.value = p.scores[key];
           applyFillClass(input);
           input.addEventListener("keydown", (e)=>{ if (e.key === "ArrowUp" || e.key === "ArrowDown"){ e.preventDefault(); } });
           input.addEventListener("input", ()=>{
-            const raw = input.value.replace(/[^\d]/g, "");
-            const v = raw === "" ? "" : clampInt(raw, 0, max ?? 200);
+            const raw = input.value.replace(/[^\d]/g, ""); const v = raw === "" ? "" : clampInt(raw, 0, max ?? 200);
             if (String(v) != input.value){ input.value = v; }
-            p.scores[key] = raw === "" ? "" : v;
-            applyFillClass(input);
-            saveState();
-            refreshComputedForPlayer(p.id);
-            renderLeaderboard();
+            p.scores[key] = raw === "" ? "" : v; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboard();
           });
           td.appendChild(input);
-        } else {
-          td.textContent = "";
-        }
+        } else { td.textContent=""; }
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
     }
-
     CATS_UPPER.forEach(cat => addRow(cat.label, cat.key, cat.hint, cat.max));
     addRow("Sous-total (1→6)", "_upper", "", null, "subtotal");
     addRow("Bonus (≥63)", "_bonus", "", null, "subtotal");
@@ -483,28 +426,11 @@
 
     state.players.forEach(p => refreshComputedForPlayer(p.id));
   }
-
-  function applyFillClass(input){
-    if (String(input.value).trim() === ""){
-      input.classList.add("is-empty");
-      input.classList.remove("is-filled");
-    } else {
-      input.classList.remove("is-empty");
-      input.classList.add("is-filled");
-    }
-  }
-  function clampInt(v, min, max){
-    let n = parseInt(v, 10);
-    if (!isFinite(n)) n = 0;
-    if (n < min) n = min;
-    if (n > max) n = max;
-    return n;
-  }
+  function applyFillClass(input){ if (String(input.value).trim() === ""){ input.classList.add("is-empty"); input.classList.remove("is-filled"); } else { input.classList.remove("is-empty"); input.classList.add("is-filled"); } }
+  function clampInt(v, min, max){ let n = parseInt(v, 10); if (!isFinite(n)) n = 0; if (n < min) n = min; if (n > max) n = max; return n; }
   function totalsForPlayer(p){ return totals(p.scores).total; }
-
   function refreshComputedForPlayer(playerId){
-    const p = state.players.find(x => x.id === playerId);
-    if (!p) return;
+    const p = state.players.find(x => x.id === playerId); if (!p) return;
     const t = totals(p.scores);
     const colIdx = state.players.findIndex(x => x.id === playerId);
     const rows = tbody.querySelectorAll("tr");
@@ -512,24 +438,44 @@
     const subtotalRow = rows[upperCount];
     const bonusRow = rows[upperCount + 1];
     const totalRow = rows[upperCount + 1 + CATS_LOWER.length + 1];
-    function setCellText(tr, idx, text, cls){
-      const td = tr.children[idx + 1];
-      if (!td) return;
-      td.textContent = String(text);
-      td.className = "cell " + (cls || "");
-    }
+    function setCellText(tr, idx, text, cls){ const td = tr.children[idx + 1]; if (!td) return; td.textContent = String(text); td.className = "cell " + (cls || ""); }
     setCellText(subtotalRow, colIdx, t.upper, "subtotal");
     setCellText(bonusRow, colIdx, t.bonus, "subtotal");
     setCellText(totalRow, colIdx, t.total, "total");
   }
 
-  function getStatsAllRoundsForPlayer(id){
-    const scores = rounds.map(r => r.totals[id]).filter(v => typeof v === "number");
-    if (!scores.length) return {avg: null, best: null, count:0, scores:[]};
-    const sum = scores.reduce((a,b)=>a+b,0);
-    const avg = Math.round(sum / scores.length);
-    const best = Math.max(...scores);
-    return {avg, best, count: scores.length, scores};
+  // Ranking unified with modes & popover carousel
+  let rankingMode = localStorage.getItem("yams-rank-mode") || "current"; // current | overall_avg | overall_wins
+  const leaderboardTitle = document.getElementById("leaderboardTitle");
+  const pop = document.getElementById("rankPopover");
+  leaderboardTitle.addEventListener("click", (e)=>{
+    // position popover near title
+    const rect = leaderboardTitle.getBoundingClientRect();
+    pop.style.top = (rect.bottom + window.scrollY + 8) + "px";
+    pop.style.left = Math.max(8, rect.left + window.scrollX - 20) + "px";
+    pop.classList.toggle("open");
+    renderPopover();
+  });
+  document.addEventListener("click", (e)=>{
+    if (!pop.contains(e.target) && e.target !== leaderboardTitle){ pop.classList.remove("open"); }
+  });
+  function renderPopover(){
+    pop.querySelectorAll(".item").forEach(it=>{
+      const mode = it.getAttribute("data-mode");
+      it.classList.toggle("active", mode === rankingMode);
+      it.onclick = ()=>{ rankingMode = mode; localStorage.setItem("yams-rank-mode", rankingMode); pop.classList.remove("open"); renderLeaderboard(); };
+    });
+  }
+
+  function winsTable(){
+    // returns wins count per player from rounds
+    const wins = {}; state.players.forEach(p => wins[p.id]=0);
+    rounds.forEach(r => {
+      let best = -Infinity, bestId=null;
+      Object.entries(r.totals).forEach(([id,t])=>{ const v=Number(t)||0; if (v>best){ best=v; bestId=id; } });
+      if (bestId && wins[bestId]!=null) wins[bestId]++;
+    });
+    return wins;
   }
 
   function renderLeaderboard(){
@@ -542,90 +488,67 @@
       const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }))
                                 .sort((a,b)=> b.total - a.total);
       data.forEach((r, i)=>{
-        const span = document.createElement("span");
-        span.className = "rank-pill";
-        span.textContent = `${i+1}. ${r.name} — ${r.total}`;
-        cont.appendChild(span);
+        const span = document.createElement("span"); span.className = "rank-pill"; span.textContent = `${i+1}. ${r.name} — ${r.total}`; cont.appendChild(span);
       });
-    } else {
-      title.textContent = "Classement — Toutes les manches";
-      // cumulé: utiliser meilleure métrique = meilleure moyenne sur N manches? On réalise la moyenne simple.
+    } else if (rankingMode === "overall_avg"){
+      title.textContent = "Classement — Toutes les manches (moyenne)";
       const data = state.players.map(p => {
-        const st = getStatsAllRoundsForPlayer(p.id);
-        return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 };
+        const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0, wins: st.wins||0 };
       }).sort((a,b)=> b.avg - a.avg);
       data.forEach((r, i)=>{
-        const span = document.createElement("span");
-        span.className = "rank-pill";
-        span.textContent = `${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`;
-        cont.appendChild(span);
+        const span = document.createElement("span"); span.className = "rank-pill"; span.textContent = `${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; cont.appendChild(span);
+      });
+    } else {
+      title.textContent = "Classement — Par victoires";
+      const wins = winsTable();
+      const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", w: wins[p.id]||0 }))
+                                .sort((a,b)=> b.w - a.w);
+      data.forEach((r, i)=>{
+        const span = document.createElement("span"); span.className = "rank-pill"; span.textContent = `${i+1}. ${r.name} — ${r.w} victoire(s)`; cont.appendChild(span);
       });
     }
     hint.textContent = state.players.length ? "" : "Ajoutez au moins un joueur pour démarrer.";
   }
 
-  // Add / Reset
-  document.getElementById("addPlayerBtn").addEventListener('click', ()=>{
-    const nameInput = document.getElementById("playerName");
-    const name = (nameInput.value || "").trim();
-    if (!name){ alert("Entrez un nom de joueur."); nameInput.focus(); return; }
-    if (nameExists(name)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
-    const p = newPlayer(name);
-    state.players.push(p);
-    saveState(); buildTable(); renderLeaderboard();
-    nameInput.value = "";
-  });
-  document.getElementById("playerName").addEventListener('keydown', (e)=>{
-    if (e.key === "Enter") document.getElementById("addPlayerBtn").click();
-  });
-  document.getElementById("resetAllBtn").addEventListener('click', ()=>{
-    if (!state.players.length) return;
-    if (confirm("Effacer toutes les feuilles de score de la manche en cours ?")){
+  // Round toggle button (single)
+  const roundToggleBtn = document.getElementById("roundToggleBtn");
+  function updateRoundBtn(){
+    roundToggleBtn.textContent = roundActive ? "Clôturer la manche" : "Nouvelle manche";
+  }
+  updateRoundBtn();
+  roundToggleBtn.addEventListener('click', ()=>{
+    if (!roundActive){
+      // start new round = reset scores
+      if (!confirm("Commencer une nouvelle manche ? (réinitialise les cases)")) return;
       state.players.forEach(p => { Object.keys(p.scores).forEach(k => p.scores[k] = ""); });
       saveState(); buildTable(); renderLeaderboard();
+      roundActive = true; localStorage.setItem(ROUNDS_STATE_KEY, "1"); updateRoundBtn();
+    } else {
+      // close current round = record totals
+      if (!state.players.length){ alert("Aucun joueur."); return; }
+      const totalsMap = {}; state.players.forEach(p => totalsMap[p.id] = totalsForPlayer(p));
+      rounds.push({ time: new Date().toISOString(), totals: totalsMap });
+      saveRounds();
+      alert("Manche enregistrée !");
+      roundActive = false; localStorage.setItem(ROUNDS_STATE_KEY, "0"); updateRoundBtn();
+      renderLeaderboard();
     }
   });
 
-  // Rounds
-  document.getElementById("closeRoundBtn").addEventListener('click', ()=>{
-    if (!state.players.length){ alert("Aucun joueur."); return; }
-    const totalsMap = {}; state.players.forEach(p => totalsMap[p.id] = totalsForPlayer(p));
-    const time = new Date().toISOString();
-    rounds.push({ time, totals: totalsMap });
-    saveRounds();
-    alert("Manche enregistrée !");
-    renderLeaderboard();
-  });
-  document.getElementById("newRoundBtn").addEventListener('click', ()=>{
-    if (!confirm("Commencer une nouvelle manche (réinitialise les scores en cours) ?")) return;
-    state.players.forEach(p => { Object.keys(p.scores).forEach(k => p.scores[k] = ""); });
-    saveState(); buildTable(); renderLeaderboard();
-  });
-
-  // History
+  // History modal (unchanged list)
   const historyModal = document.getElementById("historyModal");
   const historyList = document.getElementById("historyList");
-  document.getElementById("openHistoryBtn").addEventListener('click', ()=>{
-    renderHistory();
-    backdrop.classList.add("open"); historyModal.classList.add("open");
-  });
-  document.getElementById("closeHistory").addEventListener('click', ()=>{
-    backdrop.classList.remove("open"); historyModal.classList.remove("open");
-  });
+  document.getElementById("openHistoryBtn").addEventListener('click', ()=>{ renderHistory(); backdrop.classList.add("open"); historyModal.classList.add("open"); });
+  document.getElementById("closeHistory").addEventListener('click', ()=>{ backdrop.classList.remove("open"); historyModal.classList.remove("open"); });
   document.getElementById("clearHistoryBtn").addEventListener('click', ()=>{
-    if (!rounds.length) return;
-    if (!confirm("Effacer tout l’historique des manches ?")) return;
+    if (!rounds.length) return; if (!confirm("Effacer tout l’historique des manches ?")) return;
     rounds = []; saveRounds(); renderHistory(); renderLeaderboard();
   });
   function renderHistory(){
     historyList.innerHTML = "";
-    if (!rounds.length){
-      historyList.innerHTML = "<div class='muted' style='padding:8px'>Aucune manche enregistrée.</div>";
-      return;
-    }
+    if (!rounds.length){ historyList.innerHTML = "<div class='muted' style='padding:8px'>Aucune manche enregistrée.</div>"; return; }
     rounds.slice().reverse().forEach((r)=>{
-      const div = document.createElement("div");
-      div.className = "history-item";
+      const div = document.createElement("div"); div.className = "history-item";
       const date = new Date(r.time).toLocaleString();
       const arr = Object.entries(r.totals).map(([id, t])=>{
         const name = (state.players.find(p=>p.id===id)?.name) || "Joueur";
@@ -637,35 +560,93 @@
     });
   }
 
+  // Stats helpers (multi-round)
+  function getStatsAllRoundsForPlayer(id){
+    const scores = rounds.map(r => r.totals[id]).filter(v => typeof v === "number");
+    const count = scores.length;
+    if (!count) return {avg:null, best:null, worst:null, count:0, scores:[], wins:0, podiums:0, winRate:0, recentAvg:null, trend:null, bestStreak:0};
+    const sum = scores.reduce((a,b)=>a+b,0);
+    const avg = Math.round(sum / count);
+    const best = Math.max(...scores);
+    const worst = Math.min(...scores);
+    // wins & podiums
+    let wins=0, podiums=0;
+    rounds.forEach(r=>{
+      const arr = Object.entries(r.totals).map(([pid,t])=>({pid, t:Number(t)||0})).sort((a,b)=>b.t-a.t);
+      const rank = arr.findIndex(x=>x.pid===id);
+      if (rank===0) wins++;
+      if (rank>-1 && rank<3) podiums++;
+    });
+    const winRate = Math.round( (wins / count) * 100 );
+    // recent average (last 5)
+    const last5 = scores.slice(-5);
+    const recentAvg = Math.round(last5.reduce((a,b)=>a+b,0)/last5.length);
+    const trend = recentAvg - avg;
+    // best streak (consecutive wins)
+    let bestStreak=0, cur=0;
+    rounds.forEach(r=>{
+      const arr = Object.entries(r.totals).map(([pid,t])=>({pid, t:Number(t)||0})).sort((a,b)=>b.t-a.t);
+      if (arr[0] && arr[0].pid===id){ cur++; bestStreak=Math.max(bestStreak,cur); } else { cur=0; }
+    });
+    return {avg, best, worst, count, scores, wins, podiums, winRate, recentAvg, trend, bestStreak};
+  }
+  function percentileCurrent(total){
+    const totalsArr = state.players.map(p=> totals(p.scores).total );
+    const sorted = totalsArr.slice().sort((a,b)=>a-b);
+    const rank = sorted.findIndex(x=>x>=total);
+    const idx = (rank===-1)?sorted.length-1:rank;
+    return Math.round( (idx+1)/sorted.length * 100 );
+  }
+
   // Player stats modal
   const playerStatsModal = document.getElementById("playerStatsModal");
   const playerStatsContent = document.getElementById("playerStatsContent");
-  document.getElementById("closePlayerStats").addEventListener('click', ()=>{
-    backdrop.classList.remove("open"); playerStatsModal.classList.remove("open");
-  });
+  document.getElementById("closePlayerStats").addEventListener('click', ()=>{ backdrop.classList.remove("open"); playerStatsModal.classList.remove("open"); });
+
   function openPlayerStats(playerId){
     const p = state.players.find(x=>x.id===playerId); if (!p) return;
-    const current = totals(p.scores);
+    const name = escapeHtml(p.name||"Joueur");
+    const cur = totals(p.scores);
+    // rank in current
+    const currentSorted = state.players.map(x=>({id:x.id, total: totals(x.scores).total})).sort((a,b)=>b.total-a.total);
+    const rank = currentSorted.findIndex(x=>x.id===playerId)+1 || "-";
+    const leader = currentSorted[0]; const me = currentSorted.find(x=>x.id===playerId) || {total:0};
+    const diffLeader = leader ? (leader.total - me.total) : 0;
+    const myIndex = currentSorted.findIndex(x=>x.id===playerId);
+    const prev = (myIndex>0) ? currentSorted[myIndex-1] : null;
+    const next = (myIndex<currentSorted.length-1 && myIndex!==-1) ? currentSorted[myIndex+1] : null;
+    const gapPrev = prev ? (prev.total - me.total) : null;
+    const gapNext = next ? (me.total - next.total) : null;
+    const filled = countFilled(p.scores); const totalCells = Object.keys(p.scores).length;
+    const prog = Math.round(categoryProgress(p.scores)*100);
+    const up = sumUpper(p.scores), lo = sumLower(p.scores), bon = bonus(up), need = Math.max(0, 63 - up);
+    const perc = percentileCurrent(me.total);
+
     const all = getStatsAllRoundsForPlayer(playerId);
-    const name = escapeHtml(p.name || "Joueur");
     const svg = makeSparkline(all.scores);
+
     playerStatsContent.innerHTML = `
       <div class="stats-grid">
         <div class="card">
           <h4>Manche actuelle — ${name}</h4>
-          <div>Total: <strong>${current.total}</strong> (Haut: ${current.upper}+${current.bonus}, Bas: ${current.lower})</div>
-          <div>Cases remplies: <strong>${countFilled(p.scores)}</strong> / ${Object.keys(p.scores).length}</div>
+          <div>Total: <strong>${cur.total}</strong> (Haut: ${up}+${bon}, Bas: ${lo}) — Rang: <strong>${rank}</strong> / ${state.players.length}</div>
+          <div>Écart leader: ${diffLeader>0?`-${diffLeader}`:"leader"} ${gapPrev!=null?`• Écart au rang ${rank-1}: ${gapPrev>=0?`-${gapPrev}`:"-"}`:""}</div>
+          <div>Sur ${totalCells} cases: <strong>${filled}</strong> remplies — <strong>${prog}%</strong> de progression vs max catégorie</div>
+          <div>Bonus 63: ${bon?`✅ obtenu (+35)`:`❌ manque ${need} pts`}</div>
+          <div>Percentile vs table: ~${perc}ᵉ</div>
         </div>
         <div class="card">
           <h4>Toutes les manches — ${name}</h4>
-          <div>Moyenne: <strong>${all.avg ?? "-"}</strong> — Meilleur: <strong>${all.best ?? "-"}</strong> — Parties: <strong>${all.count}</strong></div>
+          <div>Parties: <strong>${all.count}</strong> • Victoires: <strong>${all.wins}</strong> • Podiums: <strong>${all.podiums}</strong> • Win rate: <strong>${all.winRate}%</strong></div>
+          <div>Moyenne: <strong>${all.avg ?? "-"}</strong> • Meilleur: <strong>${all.best ?? "-"}</strong> • Pire: <strong>${all.worst ?? "-"}</strong></div>
+          <div>5 dernières: <strong>${all.recentAvg ?? "-"}</strong> • Tendance: <strong>${all.trend>0?`+${all.trend}`:all.trend}</strong> • Série de victoires max: <strong>${all.bestStreak}</strong></div>
           <div class="chart">${svg}</div>
         </div>
       </div>
     `;
     backdrop.classList.add("open"); playerStatsModal.classList.add("open");
   }
-  function countFilled(scores){ return Object.values(scores).filter(v => v !== "" && v != null).length; }
+
   function makeSparkline(values){
     if (!values || !values.length) return "<em class='muted'>Pas encore de parties</em>";
     const w=300,h=120,p=6;
@@ -677,9 +658,16 @@
       const y = h - p - ((v-min)/range)*(h-2*p);
       return `${x},${y}`;
     }).join(" ");
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
-      <polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline>
-    </svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline></svg>`;
+  }
+
+  // Ranking data for export / all-round stats
+  function getStatsAllPlayers(){
+    const wins = winsTable();
+    return state.players.map(p=>{
+      const all = getStatsAllRoundsForPlayer(p.id);
+      return { id:p.id, name:p.name||"Joueur", ...all, wins: wins[p.id]||0 };
+    });
   }
 
   // Export / Import / PDF
@@ -701,27 +689,28 @@
         if (!data || !data.state || !Array.isArray(data.state.players)) throw new Error("Format invalide");
         state = data.state; saveState();
         rounds = Array.isArray(data.rounds) ? data.rounds : []; saveRounds();
-        buildTable(); renderLeaderboard();
+        buildTable(); renderLeaderboard(); updateRoundBtn();
       }catch(err){ alert("Fichier invalide : " + err.message); }
     };
     reader.readAsText(file);
   });
 
-  // Build printable view then print
   document.getElementById("exportPdfBtn").addEventListener('click', ()=>{
     buildPrintView();
     window.print();
   });
+
   function buildPrintView(){
     const wrapLB = document.getElementById("printLeaderboards");
     const wrapRounds = document.getElementById("printRoundsTable");
     const wrapStats = document.getElementById("printPlayersStats");
     wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapStats.innerHTML = "";
 
-    // Leaderboards (current + all)
+    // Leaderboards (current + overall avg + wins)
     wrapLB.innerHTML = `<h3>Classements</h3>
       <div><strong>Manche actuelle</strong>: ${buildLeaderboardHtmlCurrent()}</div>
-      <div style="margin-top:6px;"><strong>Toutes les manches</strong>: ${buildLeaderboardHtmlAll()}</div>`;
+      <div style="margin-top:6px;"><strong>Toutes les manches (moyenne)</strong>: ${buildLeaderboardHtmlAvg()}</div>
+      <div style="margin-top:6px;"><strong>Par victoires</strong>: ${buildLeaderboardHtmlWins()}</div>`;
 
     // Rounds table
     const players = state.players;
@@ -733,57 +722,67 @@
     }).join("");
     wrapRounds.innerHTML = `<h3>Scores par partie</h3><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||"<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>"}</table>`;
 
-    // Player stats with chart
+    // Player stats
     let statsHtml = "<h3>Stats par joueur</h3>";
-    players.forEach(p=>{
+    const wins = winsTable();
+    state.players.forEach(p=>{
       const all = getStatsAllRoundsForPlayer(p.id);
       const svg = makeSparkline(all.scores);
       const cur = totals(p.scores).total;
       statsHtml += `<div style="margin:8px 0;padding:8px;border:1px solid #999">
         <strong>${escapeHtml(p.name||"Joueur")}</strong><br/>
-        Manche actuelle: <strong>${cur}</strong> — Moyenne: <strong>${all.avg??"-"}</strong> — Meilleur: <strong>${all.best??"-"}</strong> — Parties: <strong>${all.count}</strong>
+        Manche actuelle: <strong>${cur}</strong> — Cases remplies: ${countFilled(p.scores)} — Prog. ~${Math.round(categoryProgress(p.scores)*100)}% — Bonus: ${sumUpper(p.scores)>=63? "OK (+35)" : "Non"}<br/>
+        Global: Moy ${all.avg??"-"} — Max ${all.best??"-"} — Min ${all.worst??"-"} — Parties ${all.count} — Gains ${wins[p.id]||0} — Podiums ${all.podiums} — WR ${all.winRate}% — 5 dernières ${all.recentAvg??"-"} — Tendance ${all.trend>0?`+${all.trend}`:all.trend} — Streak ${all.bestStreak}
         <div>${svg}</div>
       </div>`;
     });
     wrapStats.innerHTML = statsHtml;
   }
   function buildLeaderboardHtmlCurrent(){
-    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }))
-                              .sort((a,b)=> b.total - a.total);
+    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
     if (!data.length) return "<em>Aucun joueur</em>";
     return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — ${r.total}`).join(" • ");
   }
-  function buildLeaderboardHtmlAll(){
-    const data = state.players.map(p => {
-      const st = getStatsAllRoundsForPlayer(p.id);
-      return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 };
-    }).sort((a,b)=> b.avg - a.avg);
+  function buildLeaderboardHtmlAvg(){
+    const data = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
     if (!data.length) return "<em>Aucun joueur</em>";
     return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — moy ${r.avg} (max ${r.best})`).join(" • ");
   }
+  function buildLeaderboardHtmlWins(){
+    const wins = winsTable();
+    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", w: wins[p.id]||0 })).sort((a,b)=> b.w - a.w);
+    if (!data.length) return "<em>Aucun joueur</em>";
+    return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — ${r.w} vic.`).join(" • ");
+  }
 
-  // Clear cache
+  // Settings & printing & cache
+  const settingsBtn = document.getElementById("settingsBtn");
+  const backdrop = document.getElementById("backdrop");
+  const modal = document.getElementById("settingsModal");
+  const closeSettings = document.getElementById("closeSettings");
+  function openSettings(){ backdrop.classList.add("open"); modal.classList.add("open"); }
+  function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
+  settingsBtn.addEventListener("click", openSettings);
+  closeSettings.addEventListener("click", closeSettingsModal);
+  backdrop.addEventListener("click", (e)=>{
+    const inAnyModal = document.getElementById("historyModal").classList.contains("open") || document.getElementById("playerStatsModal").classList.contains("open") || modal.classList.contains("open");
+    if (inAnyModal){ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); backdrop.classList.remove("open"); }
+  });
+
   document.getElementById("clearCacheBtn").addEventListener('click', async ()=>{
     if (!confirm("Vider le cache et redémarrer l’application ?")) return;
     try{
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-      if (navigator.serviceWorker){
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.unregister()));
-      }
+      const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k)));
+      if (navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
     }catch(e){ console.warn(e); }
     location.reload();
   });
 
-  // First paint
-  buildTable();
-  renderLeaderboard();
+  // Initial render
+  buildTable(); renderLeaderboard(); updateRoundBtn();
 
   // SW
-  if ("serviceWorker" in navigator){
-    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v9.js"));
-  }
+  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v10.js")); }
 })();
 </script>
 </body>

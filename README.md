@@ -1,1 +1,1 @@
-v7.1: Classement basculable (manche vs global), bouton Stats par joueur (modale), export PDF riche (table des parties, deux classements, stats+graphiques).
+v7.2: Classement unifié via carousel (3 modes), bouton de manche unique (start/close), stats joueur enrichies (courant & global), export PDF complet.
