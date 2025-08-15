@@ -1,1 +1,1 @@
-v7: Multi-manches (moyenne/meilleur + historique), Export PDF (print A4 paysage), largeur de colonnes, densité (Normal/Compact/Ultra), totaux collés en bas, toutes les features précédentes.
+v7.1: Classement basculable (manche vs global), bouton Stats par joueur (modale), export PDF riche (table des parties, deux classements, stats+graphiques).

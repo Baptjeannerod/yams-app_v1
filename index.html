@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest?v=8">
+<link rel="manifest" href="manifest.webmanifest?v=9">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Scores & Classement</title>
 <style>
@@ -31,14 +31,11 @@
     --success: rgba(34,197,94,.22); --success-border: rgba(34,197,94,.55);
     --sticky: color-mix(in oklab, var(--panel) 96%, transparent);
   }
-
-  /* Zoom */
   html { font-size: calc(16px * var(--scale, 1)); }
   html[data-scale="0.9"]{ --scale: .9; }
   html[data-scale="1"]{ --scale: 1; }
   html[data-scale="1.1"]{ --scale: 1.1; }
 
-  /* Densité */
   html[data-dense="0"]{ --dense-font: 1rem; --dense-pad: 8px; --input-w: 5.2rem; }
   html[data-dense="1"]{ --dense-font: .9rem; --dense-pad: 6px; --input-w: 4.6rem; }
   html[data-dense="2"]{ --dense-font: .8rem; --dense-pad: 4px; --input-w: 4.0rem; }
@@ -59,15 +56,16 @@
   .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
   button, input, select{
     background:#fff; color:var(--text); border:1px solid var(--border); padding:10px 12px; border-radius:10px; outline:none;
-    min-height:40px; font-size:1rem;
+    min-height:40px; font-size:1rem; cursor:pointer;
   }
   html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select { background:#111827; }
+  .btn-tab { border-radius:999px; padding:8px 12px; }
+  .btn-tab[aria-pressed="true"]{ background:var(--accent-soft); border-color:var(--accent-border); }
 
   .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   .rank-pill{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; }
   .muted { color: var(--muted); }
 
-  /* Table */
   .table-wrap{
     background: var(--panel); border:1px solid var(--border); border-radius: var(--radius);
     overflow: auto;
@@ -94,13 +92,13 @@
 
   .player-head{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
   .player-head .name{ font-weight:700; text-align:center; }
+  .player-head button{ min-height:30px; padding:6px 8px; font-size:.9rem; }
 
   .cell{ text-align: center; }
   .cell input[type="number"]{ width: var(--input-w); text-align:center; min-height:34px; margin: 0 auto; display:block; }
   .cell input.is-empty{ background: var(--danger); border-color: var(--danger-border); }
   .cell input.is-filled{ background: var(--success); border-color: var(--success-border); }
 
-  /* Sticky first column + sticky last row (Total) */
   th:first-child, td:first-child{
     position: sticky; left: 0; z-index: 4; background: var(--sticky);
   }
@@ -109,22 +107,14 @@
   .subtotal{ color: var(--muted); font-weight: 600; text-align:center; }
   .total{ font-weight:800; text-align:center; }
 
-  /* Settings button (top-right) */
-  .settings-btn{
-    margin-left:auto;
-    width:40px; height:40px; display:grid; place-items:center; border-radius:10px;
-  }
+  .settings-btn{ margin-left:auto; width:40px; height:40px; display:grid; place-items:center; border-radius:10px; }
 
-  /* Modal settings */
-  .backdrop{
-    position: fixed; inset: 0; background: rgba(0,0,0,.35);
-    display:none; z-index: 90;
-  }
+  .backdrop{ position: fixed; inset: 0; background: rgba(0,0,0,.35); display:none; z-index: 90; }
   .backdrop.open{ display:block; }
   .modal{
     position: fixed; z-index: 100;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: min(640px, calc(100vw - 32px));
+    width: min(760px, calc(100vw - 32px));
     background: var(--panel); color: var(--text);
     border: 1px solid var(--border); border-radius: 16px; padding: 16px;
     box-shadow: 0 24px 64px rgba(0,0,0,.25);
@@ -142,17 +132,19 @@
   .danger-btn{ border-color: var(--danger-border); color: #7f1d1d; }
   .toggle{ display:flex; align-items:center; gap:10px; }
 
-  /* History modal */
-  .history-list{ max-height: 50vh; overflow:auto; background: var(--panel); border:1px solid var(--border); border-radius: 12px; padding: 8px; }
-  .history-item{ padding:8px; border-bottom:1px dashed var(--border); display:flex; gap:10px; align-items:center; justify-content:space-between; }
-  .history-item:last-child{ border-bottom:none; }
+  /* Stats modal */
+  .stats-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  .card{ border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--panel); }
+  .card h4{ margin:0 0 8px 0; }
+  .chart{ width:100%; height:140px; }
 
   /* Print (PDF) */
+  #printView{ display:none; }
   @media print{
     @page{ size: A4 landscape; margin: 12mm; }
-    header, .toolbar, .settings-btn, .backdrop, .modal { display: none !important; }
+    header, .toolbar, .settings-btn, .backdrop, .modal, main { display: none !important; }
     body{ background:white; }
-    .table-wrap{ border:none; }
+    #printView{ display:block !important; }
     .leaderboard{ margin-bottom: 8px; }
     .rank-pill{ border:1px solid #999 !important; background:#eee !important; }
     th, td{ border:1px solid #666 !important; background: white !important; color: black !important; }
@@ -163,7 +155,7 @@
   <header>
     <div>
       <h1>Yam’s — Scores & Classement</h1>
-      <div class="sub">Vue tableau compacte. Multi-manches, PDF, densité & largeur, totaux collés.</div>
+      <div class="sub">Classement par manche / global, stats par joueur, export PDF enrichi.</div>
     </div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
@@ -177,10 +169,14 @@
       <button id="closeRoundBtn">Clôturer la manche</button>
       <button id="newRoundBtn">Nouvelle manche</button>
       <button id="openHistoryBtn">Historique</button>
+      <span class="spacer"></span>
+      <span>Classement :</span>
+      <button id="rankCurrent" class="btn-tab" aria-pressed="true">Manche actuelle</button>
+      <button id="rankAll" class="btn-tab" aria-pressed="false">Toutes les manches</button>
     </div>
 
     <section class="leaderboard" id="leaderboard">
-      <strong>Classement</strong>
+      <strong id="leaderboardTitle">Classement — Manche actuelle</strong>
       <div id="rankingPills"></div>
       <span class="muted" id="leaderboardHint"></span>
     </section>
@@ -192,6 +188,14 @@
       </table>
     </div>
   </main>
+
+  <!-- Printable view -->
+  <div id="printView">
+    <h2>Feuilles de score — Export</h2>
+    <div id="printLeaderboards"></div>
+    <div id="printRoundsTable"></div>
+    <div id="printPlayersStats"></div>
+  </div>
 
   <!-- Settings Modal -->
   <div id="backdrop" class="backdrop"></div>
@@ -254,9 +258,15 @@
     </div>
   </div>
 
+  <!-- Player Stats Modal -->
+  <div id="playerStatsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="playerStatsTitle">
+    <div class="close-line"><button id="closePlayerStats" class="ghost-btn" aria-label="Fermer">✕</button></div>
+    <h3 id="playerStatsTitle">Stats joueur</h3>
+    <div id="playerStatsContent"></div>
+  </div>
+
 <script>
 (function(){
-  // Limites avec 5 dés en section haute
   const CATS_UPPER = [
     {key:'ones',   label:'1 ×', hint:'Somme des 1', max:5},
     {key:'twos',   label:'2 ×', hint:'Somme des 2', max:10},
@@ -275,13 +285,11 @@
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
   const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
-
-  const STORAGE_KEY = "yams-app-pages-v6.1-table"; // compat scores en cours
-  const ROUNDS_KEY = "yams-rounds-v7"; // historique des manches
+  const STORAGE_KEY = "yams-app-pages-v6.1-table";
+  const ROUNDS_KEY = "yams-rounds-v7";
   const THEME_KEY = "yams-theme-mode";
-  const UI_KEY = "yams-ui-v7"; // { scale, dense, colMin }
+  const UI_KEY = "yams-ui-v7";
 
-  /** Theme **/
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
   function applyTheme(mode){
     let theme = mode;
@@ -298,7 +306,6 @@
   }
   initTheme();
 
-  /** UI (zoom + densité + largeur) **/
   function applyUI(ui){
     if (!ui) return;
     if (ui.scale){ document.documentElement.setAttribute("data-scale", String(ui.scale)); }
@@ -308,17 +315,14 @@
   }
   function loadUI(){
     try {
-      const old = JSON.parse(localStorage.getItem("yams-ui") || "{}"); // migration depuis versions précédentes
       const cur = JSON.parse(localStorage.getItem(UI_KEY) || "{}");
-      const dense = (old.uc === true && (cur.dense==null)) ? 1 : (cur.dense ?? 0);
-      return Object.assign({ scale: 1, dense, colMin: 150 }, cur);
+      return Object.assign({ scale: 1, dense:0, colMin:150 }, cur);
     } catch(e){ return { scale:1, dense:0, colMin:150 }; }
   }
   function saveUI(ui){ try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch(e){} }
   let uiState = loadUI();
   applyUI(uiState);
 
-  // Settings modal
   const settingsBtn = document.getElementById("settingsBtn");
   const backdrop = document.getElementById("backdrop");
   const modal = document.getElementById("settingsModal");
@@ -330,7 +334,6 @@
   backdrop.addEventListener("click", closeSettingsModal);
   document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeSettingsModal(); });
 
-  // Theme radio
   document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
     r.addEventListener("change", ()=>{
       const mode = r.value;
@@ -338,27 +341,23 @@
       applyTheme(mode);
     });
   });
-  // Zoom buttons
   document.querySelectorAll('[data-zoom]').forEach(btn => {
     btn.addEventListener('click', () => {
       uiState.scale = btn.getAttribute('data-zoom');
       applyUI(uiState); saveUI(uiState);
     });
   });
-  // Density buttons
   document.querySelectorAll('[data-dense]').forEach(btn => {
     btn.addEventListener('click', () => {
       uiState.dense = Number(btn.getAttribute('data-dense'));
       applyUI(uiState); saveUI(uiState);
     });
   });
-  // Column width
   document.getElementById("colWidth").addEventListener('change', (e)=>{
     uiState.colMin = Number(e.target.value);
     applyUI(uiState); saveUI(uiState);
   });
 
-  // State
   let state = loadState() || { players: [] };
   function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
@@ -371,12 +370,10 @@
     const cn = canonicalName(name);
     return state.players.some(p => canonicalName(p.name) === cn && p.id !== exceptId);
   }
-
   function newPlayer(name){
     const scores = {}; ALL_CATS.forEach(c => scores[c.key] = "");
     return { id: crypto.randomUUID(), name, scores };
   }
-
   function num(v){ const n = Number(v); return isFinite(n) ? n : 0; }
   function sumUpper(scores){ return CATS_UPPER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
   function sumLower(scores){ return CATS_LOWER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
@@ -392,8 +389,14 @@
   const thead = document.getElementById("thead");
   const tbody = document.getElementById("tbody");
 
+  // Ranking mode
+  let rankingMode = "current"; // "current" | "all"
+  const rankCurrentBtn = document.getElementById("rankCurrent");
+  const rankAllBtn = document.getElementById("rankAll");
+  rankCurrentBtn.addEventListener('click', ()=>{ rankingMode="current"; rankCurrentBtn.setAttribute("aria-pressed","true"); rankAllBtn.setAttribute("aria-pressed","false"); renderLeaderboard(); });
+  rankAllBtn.addEventListener('click', ()=>{ rankingMode="all"; rankCurrentBtn.setAttribute("aria-pressed","false"); rankAllBtn.setAttribute("aria-pressed","true"); renderLeaderboard(); });
+
   function buildTable(){
-    // Header
     thead.innerHTML = "";
     const trHead = document.createElement("tr");
     const thCat = document.createElement("th");
@@ -407,10 +410,11 @@
       th.dataset.playerId = p.id;
       th.innerHTML = `<div class="player-head">
         <span class="name">${escapeHtml(p.name || "Sans nom")}</span>
+        <button data-action="stats" title="Stats">📈</button>
         <button data-action="rename" title="Renommer">✎</button>
         <button data-action="delete" class="danger" title="Supprimer">✕</button>
       </div>`;
-      // actions
+      th.querySelector('[data-action="stats"]').addEventListener('click', ()=> openPlayerStats(p.id));
       th.querySelector('[data-action="rename"]').addEventListener('click', ()=>{
         const current = p.name || "";
         const newName = prompt("Nouveau nom du joueur :", current);
@@ -434,7 +438,6 @@
 
     thead.appendChild(trHead);
 
-    // Body rows
     tbody.innerHTML = "";
     function addRow(label, key, hint, max, className="", isLast=false){
       const tr = document.createElement("tr");
@@ -465,7 +468,6 @@
           });
           td.appendChild(input);
         } else {
-          // computed cell
           td.textContent = "";
         }
         tr.appendChild(td);
@@ -479,7 +481,6 @@
     CATS_LOWER.forEach(cat => addRow(cat.label, cat.key, cat.hint, cat.max));
     addRow("Total", "_total", "", null, "total", true);
 
-    // Initialize computed cells
     state.players.forEach(p => refreshComputedForPlayer(p.id));
   }
 
@@ -492,7 +493,6 @@
       input.classList.add("is-filled");
     }
   }
-
   function clampInt(v, min, max){
     let n = parseInt(v, 10);
     if (!isFinite(n)) n = 0;
@@ -500,59 +500,67 @@
     if (n > max) n = max;
     return n;
   }
-
-  function totalsForPlayer(p){
-    return totals(p.scores).total;
-  }
+  function totalsForPlayer(p){ return totals(p.scores).total; }
 
   function refreshComputedForPlayer(playerId){
     const p = state.players.find(x => x.id === playerId);
     if (!p) return;
     const t = totals(p.scores);
-
     const colIdx = state.players.findIndex(x => x.id === playerId);
     const rows = tbody.querySelectorAll("tr");
     const upperCount = CATS_UPPER.length;
     const subtotalRow = rows[upperCount];
     const bonusRow = rows[upperCount + 1];
     const totalRow = rows[upperCount + 1 + CATS_LOWER.length + 1];
-
     function setCellText(tr, idx, text, cls){
       const td = tr.children[idx + 1];
       if (!td) return;
       td.textContent = String(text);
       td.className = "cell " + (cls || "");
     }
-
     setCellText(subtotalRow, colIdx, t.upper, "subtotal");
     setCellText(bonusRow, colIdx, t.bonus, "subtotal");
     setCellText(totalRow, colIdx, t.total, "total");
   }
 
-  // Leaderboard with avg & best from rounds
-  function getStatsForPlayer(id){
+  function getStatsAllRoundsForPlayer(id){
     const scores = rounds.map(r => r.totals[id]).filter(v => typeof v === "number");
-    if (!scores.length) return {avg: null, best: null};
+    if (!scores.length) return {avg: null, best: null, count:0, scores:[]};
     const sum = scores.reduce((a,b)=>a+b,0);
     const avg = Math.round(sum / scores.length);
     const best = Math.max(...scores);
-    return {avg, best};
+    return {avg, best, count: scores.length, scores};
   }
 
   function renderLeaderboard(){
+    const title = document.getElementById("leaderboardTitle");
     const cont = document.getElementById("rankingPills");
     const hint = document.getElementById("leaderboardHint");
-    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }))
-                              .sort((a,b)=> b.total - a.total);
     cont.innerHTML = "";
-    data.forEach((r, i)=>{
-      const st = getStatsForPlayer(r.id);
-      const extra = (st.avg!=null && st.best!=null) ? ` (moy ${st.avg}, max ${st.best})` : "";
-      const span = document.createElement("span");
-      span.className = "rank-pill";
-      span.textContent = `${i+1}. ${r.name} — ${r.total}${extra}`;
-      cont.appendChild(span);
-    });
+    if (rankingMode === "current"){
+      title.textContent = "Classement — Manche actuelle";
+      const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }))
+                                .sort((a,b)=> b.total - a.total);
+      data.forEach((r, i)=>{
+        const span = document.createElement("span");
+        span.className = "rank-pill";
+        span.textContent = `${i+1}. ${r.name} — ${r.total}`;
+        cont.appendChild(span);
+      });
+    } else {
+      title.textContent = "Classement — Toutes les manches";
+      // cumulé: utiliser meilleure métrique = meilleure moyenne sur N manches? On réalise la moyenne simple.
+      const data = state.players.map(p => {
+        const st = getStatsAllRoundsForPlayer(p.id);
+        return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 };
+      }).sort((a,b)=> b.avg - a.avg);
+      data.forEach((r, i)=>{
+        const span = document.createElement("span");
+        span.className = "rank-pill";
+        span.textContent = `${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`;
+        cont.appendChild(span);
+      });
+    }
     hint.textContent = state.players.length ? "" : "Ajoutez au moins un joueur pour démarrer.";
   }
 
@@ -578,7 +586,7 @@
     }
   });
 
-  // Rounds: close & new & history
+  // Rounds
   document.getElementById("closeRoundBtn").addEventListener('click', ()=>{
     if (!state.players.length){ alert("Aucun joueur."); return; }
     const totalsMap = {}; state.players.forEach(p => totalsMap[p.id] = totalsForPlayer(p));
@@ -594,6 +602,7 @@
     saveState(); buildTable(); renderLeaderboard();
   });
 
+  // History
   const historyModal = document.getElementById("historyModal");
   const historyList = document.getElementById("historyList");
   document.getElementById("openHistoryBtn").addEventListener('click', ()=>{
@@ -608,18 +617,16 @@
     if (!confirm("Effacer tout l’historique des manches ?")) return;
     rounds = []; saveRounds(); renderHistory(); renderLeaderboard();
   });
-
   function renderHistory(){
     historyList.innerHTML = "";
     if (!rounds.length){
       historyList.innerHTML = "<div class='muted' style='padding:8px'>Aucune manche enregistrée.</div>";
       return;
     }
-    rounds.slice().reverse().forEach((r, idx)=>{
+    rounds.slice().reverse().forEach((r)=>{
       const div = document.createElement("div");
       div.className = "history-item";
       const date = new Date(r.time).toLocaleString();
-      // Compose a small summary (top 3 players of that round):
       const arr = Object.entries(r.totals).map(([id, t])=>{
         const name = (state.players.find(p=>p.id===id)?.name) || "Joueur";
         return {id, name, t: Number(t)||0};
@@ -630,7 +637,52 @@
     });
   }
 
-  // Export / Import / PDF / Clear cache
+  // Player stats modal
+  const playerStatsModal = document.getElementById("playerStatsModal");
+  const playerStatsContent = document.getElementById("playerStatsContent");
+  document.getElementById("closePlayerStats").addEventListener('click', ()=>{
+    backdrop.classList.remove("open"); playerStatsModal.classList.remove("open");
+  });
+  function openPlayerStats(playerId){
+    const p = state.players.find(x=>x.id===playerId); if (!p) return;
+    const current = totals(p.scores);
+    const all = getStatsAllRoundsForPlayer(playerId);
+    const name = escapeHtml(p.name || "Joueur");
+    const svg = makeSparkline(all.scores);
+    playerStatsContent.innerHTML = `
+      <div class="stats-grid">
+        <div class="card">
+          <h4>Manche actuelle — ${name}</h4>
+          <div>Total: <strong>${current.total}</strong> (Haut: ${current.upper}+${current.bonus}, Bas: ${current.lower})</div>
+          <div>Cases remplies: <strong>${countFilled(p.scores)}</strong> / ${Object.keys(p.scores).length}</div>
+        </div>
+        <div class="card">
+          <h4>Toutes les manches — ${name}</h4>
+          <div>Moyenne: <strong>${all.avg ?? "-"}</strong> — Meilleur: <strong>${all.best ?? "-"}</strong> — Parties: <strong>${all.count}</strong></div>
+          <div class="chart">${svg}</div>
+        </div>
+      </div>
+    `;
+    backdrop.classList.add("open"); playerStatsModal.classList.add("open");
+  }
+  function countFilled(scores){ return Object.values(scores).filter(v => v !== "" && v != null).length; }
+  function makeSparkline(values){
+    if (!values || !values.length) return "<em class='muted'>Pas encore de parties</em>";
+    const w=300,h=120,p=6;
+    const max = Math.max(...values, 1); const min = Math.min(...values, 0);
+    const range = Math.max(1, max-min);
+    const step = (w-2*p)/Math.max(1, values.length-1);
+    const pts = values.map((v,i)=>{
+      const x = p + i*step;
+      const y = h - p - ((v-min)/range)*(h-2*p);
+      return `${x},${y}`;
+    }).join(" ");
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+      <polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline>
+    </svg>`;
+  }
+
+  // Export / Import / PDF
   document.getElementById("exportBtn").addEventListener('click', ()=>{
     const blob = new Blob([JSON.stringify({state, rounds}, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
@@ -654,7 +706,63 @@
     };
     reader.readAsText(file);
   });
-  document.getElementById("exportPdfBtn").addEventListener('click', ()=>{ window.print(); });
+
+  // Build printable view then print
+  document.getElementById("exportPdfBtn").addEventListener('click', ()=>{
+    buildPrintView();
+    window.print();
+  });
+  function buildPrintView(){
+    const wrapLB = document.getElementById("printLeaderboards");
+    const wrapRounds = document.getElementById("printRoundsTable");
+    const wrapStats = document.getElementById("printPlayersStats");
+    wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapStats.innerHTML = "";
+
+    // Leaderboards (current + all)
+    wrapLB.innerHTML = `<h3>Classements</h3>
+      <div><strong>Manche actuelle</strong>: ${buildLeaderboardHtmlCurrent()}</div>
+      <div style="margin-top:6px;"><strong>Toutes les manches</strong>: ${buildLeaderboardHtmlAll()}</div>`;
+
+    // Rounds table
+    const players = state.players;
+    const head = `<tr><th>Partie</th>${players.map(p=>`<th>${escapeHtml(p.name||"Joueur")}</th>`).join("")}</tr>`;
+    const rows = rounds.map((r,i)=>{
+      const date = new Date(r.time).toLocaleString();
+      const tds = players.map(p => `<td style="text-align:right">${r.totals[p.id]??""}</td>`).join("");
+      return `<tr><td>${i+1} — ${date}</td>${tds}</tr>`;
+    }).join("");
+    wrapRounds.innerHTML = `<h3>Scores par partie</h3><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||"<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>"}</table>`;
+
+    // Player stats with chart
+    let statsHtml = "<h3>Stats par joueur</h3>";
+    players.forEach(p=>{
+      const all = getStatsAllRoundsForPlayer(p.id);
+      const svg = makeSparkline(all.scores);
+      const cur = totals(p.scores).total;
+      statsHtml += `<div style="margin:8px 0;padding:8px;border:1px solid #999">
+        <strong>${escapeHtml(p.name||"Joueur")}</strong><br/>
+        Manche actuelle: <strong>${cur}</strong> — Moyenne: <strong>${all.avg??"-"}</strong> — Meilleur: <strong>${all.best??"-"}</strong> — Parties: <strong>${all.count}</strong>
+        <div>${svg}</div>
+      </div>`;
+    });
+    wrapStats.innerHTML = statsHtml;
+  }
+  function buildLeaderboardHtmlCurrent(){
+    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }))
+                              .sort((a,b)=> b.total - a.total);
+    if (!data.length) return "<em>Aucun joueur</em>";
+    return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — ${r.total}`).join(" • ");
+  }
+  function buildLeaderboardHtmlAll(){
+    const data = state.players.map(p => {
+      const st = getStatsAllRoundsForPlayer(p.id);
+      return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 };
+    }).sort((a,b)=> b.avg - a.avg);
+    if (!data.length) return "<em>Aucun joueur</em>";
+    return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — moy ${r.avg} (max ${r.best})`).join(" • ");
+  }
+
+  // Clear cache
   document.getElementById("clearCacheBtn").addEventListener('click', async ()=>{
     if (!confirm("Vider le cache et redémarrer l’application ?")) return;
     try{
@@ -672,9 +780,9 @@
   buildTable();
   renderLeaderboard();
 
-  // PWA SW (versioned filename to force update)
+  // SW
   if ("serviceWorker" in navigator){
-    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v8.js"));
+    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v9.js"));
   }
 })();
 </script>
