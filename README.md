@@ -1,1 +1,1 @@
-v7.3: Classement unifié (3 sous-blocs), stats épurées, graphiques avec axes/légendes, export JSON avec computed_stats, PDF clarifié.
+v7.3.1 hotfix: fixed JSON build syntax, added error overlay, default highlight set, cache-busting SW.

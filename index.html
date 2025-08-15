@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest?v=11">
+<link rel="manifest" href="manifest.webmanifest?v=11.1">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Scores & Classement</title>
 <style>
@@ -108,31 +108,32 @@
   .hidden-input{ display:none; }
   .danger-btn{ border-color: var(--danger-border); color: #7f1d1d; }
 
-  /* Stats modal revised */
-  .stats-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  .card{ border:1px solid var(--border); border-radius:12px; padding:12px; background: var(--panel); }
-  .card h4{ margin:0 0 8px 0; }
-  .mini{ font-size:.95rem; }
-  .kv{ display:grid; grid-template-columns: auto 1fr; gap:6px 10px; align-items:center; }
-  .kv b{ text-align:right; }
-  .chart{ width:100%; height:160px; }
+  /* Error overlay */
+  #errOverlay{ position:fixed; inset:0; display:none; background:rgba(0,0,0,.65); z-index:9999; color:white; }
+  #errBox{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:min(720px, calc(100vw - 32px)); background:#111827; border:1px solid #ef4444; border-radius:14px; padding:16px; }
+  #errBox pre{ white-space:pre-wrap; word-break:break-word; background:#0b1220; padding:10px; border-radius:8px; max-height:40vh; overflow:auto; }
+  #errActions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
 
-  /* Print */
-  #printView{ display:none; }
-  @media print{
-    @page{ size: A4 landscape; margin: 12mm; }
-    header, .toolbar, .settings-btn, .backdrop, .modal, main { display: none !important; }
-    body{ background:white; }
-    #printView{ display:block !important; }
-    th, td{ border:1px solid #666 !important; background: white !important; color: black !important; }
-  }
 </style>
 </head>
 <body>
+  <div id="errOverlay">
+    <div id="errBox">
+      <h3>Oups — une erreur JavaScript a été détectée</h3>
+      <p>Tu peux vider le cache, copier le détail, puis recharger.</p>
+      <pre id="errText"></pre>
+      <div id="errActions">
+        <button id="btnCopy">Copier l’erreur</button>
+        <button id="btnClear">Vider le cache</button>
+        <button id="btnReload">Recharger</button>
+      </div>
+    </div>
+  </div>
+
   <header>
     <div>
       <h1>Yam’s — Scores & Classement</h1>
-      <div class="sub">Classement unifié (3 vues ensemble), bouton de manche unique, stats & graphiques clarifiés.</div>
+      <div class="sub">Classement unifié, bouton de manche unique, stats & graphiques clarifiés.</div>
     </div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
@@ -149,7 +150,7 @@
     <section class="leaderboard" id="leaderboard">
       <div class="lb-title" id="lbTitle"><strong>Classement (tap pour mettre en avant une vue)</strong> <span class="hint">Manche actuelle • Moyenne (global) • Victoires</span></div>
       <div class="lb-grid">
-        <div class="lb-block" id="lb-current"><h4>Manche actuelle</h4><div id="lbCurrentPills"></div></div>
+        <div class="lb-block highlight" id="lb-current"><h4>Manche actuelle</h4><div id="lbCurrentPills"></div></div>
         <div class="lb-block" id="lb-avg"><h4>Moyenne — toutes les manches</h4><div id="lbAvgPills"></div></div>
         <div class="lb-block" id="lb-wins"><h4>Par victoires</h4><div id="lbWinsPills"></div></div>
       </div>
@@ -240,6 +241,38 @@
     <h3 id="playerStatsTitle">Stats joueur</h3>
     <div id="playerStatsContent"></div>
   </div>
+
+<script>
+// Error overlay bootstrap
+(function(){
+  const overlay = document.getElementById('errOverlay');
+  const txt = document.getElementById('errText');
+  const btnCopy = document.getElementById('btnCopy');
+  const btnClear = document.getElementById('btnClear');
+  const btnReload = document.getElementById('btnReload');
+  function showErr(message, source, lineno, colno, error){
+    overlay.style.display = 'block';
+    txt.textContent = [message, source?(`@ ${source}:${lineno}:${colno}`):"", error && error.stack ? ("\n"+error.stack) : ""].join(" ");
+  }
+  window.addEventListener('error', (e)=>{
+    showErr(e.message, e.filename, e.lineno, e.colno, e.error);
+  });
+  window.addEventListener('unhandledrejection', (e)=>{
+    showErr('Unhandled Promise rejection', '', 0, 0, e.reason);
+  });
+  btnCopy.addEventListener('click', ()=>{
+    navigator.clipboard.writeText(txt.textContent||"");
+  });
+  btnClear.addEventListener('click', async ()=>{
+    try{
+      const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k)));
+      if (navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
+    }catch(e){}
+    location.reload();
+  });
+  btnReload.addEventListener('click', ()=> location.reload());
+})();
+</script>
 
 <script>
 (function(){
@@ -409,7 +442,6 @@
   const lbBlocks = ["lb-current","lb-avg","lb-wins"];
   let hlIndex = 0;
   lbTitle.addEventListener("click", ()=>{
-    // loop highlight
     document.getElementById(lbBlocks[hlIndex]).classList.remove("highlight");
     hlIndex = (hlIndex + 1) % lbBlocks.length;
     document.getElementById(lbBlocks[hlIndex]).classList.add("highlight");
@@ -520,7 +552,6 @@
     return Math.round( (pos+1)/Math.max(1,sorted.length) * 100 );
   }
 
-  // Stats modal (clear layout + axes on chart)
   const playerStatsModal = document.getElementById("playerStatsModal");
   const playerStatsContent = document.getElementById("playerStatsContent");
   document.getElementById("closePlayerStats").addEventListener('click', ()=>{ backdrop.classList.remove("open"); playerStatsModal.classList.remove("open"); });
@@ -582,7 +613,6 @@
       const y = h - p - ((v-min)/range)*(h-2*p);
       return `${x},${y}`;
     }).join(" ");
-    // axes + ticks
     const y0 = h-p, x0 = p;
     const yTicks = 4;
     let ticks = "";
@@ -592,7 +622,6 @@
       ticks += `<text x="${x0-6}" y="${y+4}" font-size="10" text-anchor="end">${Math.round(val)}</text>`;
       ticks += `<line x1="${x0}" y1="${y}" x2="${w-p}" y2="${y}" stroke="currentColor" opacity="0.15"/>`;
     }
-    // x labels at start/middle/end
     const xLabels = `<text x="${x0}" y="${h-6}" font-size="10" text-anchor="middle">1</text>
                      <text x="${(w)/2}" y="${h-6}" font-size="10" text-anchor="middle">${Math.ceil(values.length/2)}</text>
                      <text x="${w-p}" y="${h-6}" font-size="10" text-anchor="middle">${values.length}</text>`;
@@ -607,7 +636,7 @@
     </svg>`;
   }
 
-  // Export JSON with computed_stats
+  // Export JSON with computed_stats (fixed)
   function buildComputedStats(){
     const wins = winsTable();
     const playersStats = {};
@@ -621,7 +650,7 @@
           filled_cells: countFilled(p.scores),
           progress_pct: Math.round(categoryProgress(p.scores)*100)
         },
-        all_rounds: { **: "scores across all rounds",
+        all_rounds: {
           count: all.count, wins: all.wins, win_rate: all.winRate, podiums: all.podiums,
           avg: all.avg, best: all.best, worst: all.worst,
           recent_avg_5: all.recentAvg, trend_vs_avg: all.trend, best_win_streak: all.bestStreak,
@@ -669,7 +698,6 @@
     const wrapStats = document.getElementById("printPlayersStats");
     wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapStats.innerHTML = "";
 
-    // Leaderboards
     const lbCurrent = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
     const lbAvg = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
     const wmap = winsTable(); const lbWins = state.players.map(p => ({ name:p.name||"Sans nom", w: wmap[p.id]||0 })).sort((a,b)=> b.w - a.w);
@@ -680,7 +708,6 @@
       <div><strong>Par victoires :</strong> ${lbWins.map((r,i)=>`${i+1}. ${r.name} — ${r.w} vic.`).join(" • ") || "<em>Aucun joueur</em>"}</div>
     `;
 
-    // Rounds table
     const players = state.players;
     const head = `<tr><th>Partie</th>${players.map(p=>`<th>${escapeHtml(p.name||"Joueur")}</th>`).join("")}</tr>`;
     const rows = rounds.map((r,i)=>{
@@ -690,7 +717,6 @@
     }).join("");
     wrapRounds.innerHTML = `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||"<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>"}</table>`;
 
-    // Player stats (compact blocks + chart with legend)
     let statsHtml = "";
     state.players.forEach(p=>{
       const all = getStatsAllRoundsForPlayer(p.id);
@@ -728,9 +754,7 @@
     saveState(); buildTable(); renderLeaderboards();
     nameInput.value = "";
   });
-  document.getElementById("playerName").addEventListener('keydown', (e)=>{
-    if (e.key === "Enter") document.getElementById("addPlayerBtn").click();
-  });
+  document.getElementById("playerName").addEventListener('keydown', (e)=>{ if (e.key === "Enter") document.getElementById("addPlayerBtn").click(); });
 
   const settingsBtn = document.getElementById("settingsBtn");
   const backdrop = document.getElementById("backdrop");
@@ -756,7 +780,7 @@
   buildTable(); renderLeaderboards(); updateRoundBtn();
 
   // SW
-  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v11.js")); }
+  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v11.1.js")); }
 })();
 </script>
 </body>
