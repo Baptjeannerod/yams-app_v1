@@ -1,1 +1,1 @@
-Voir index.html. Déployez sur GitHub Pages (branche main, racine).
+Déployez sur GitHub Pages. Le SW v3 force un chargement réseau pour la page HTML afin d'éviter le cache trop agressif.
