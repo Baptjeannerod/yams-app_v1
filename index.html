@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest?v=10">
+<link rel="manifest" href="manifest.webmanifest?v=11">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Scores & Classement</title>
 <style>
@@ -21,6 +21,7 @@
     --danger: rgba(239,68,68,.2); --danger-border: rgba(239,68,68,.45);
     --success: rgba(34,197,94,.2); --success-border: rgba(34,197,94,.45);
     --sticky: color-mix(in oklab, var(--panel) 92%, transparent);
+    --hl: rgba(250,204,21,.18); --hl-border: rgba(250,204,21,.5);
   }
   html[data-theme="dark"]{
     --bg:#0f172a; --panel:#0b1220; --text:#e2e8f0; --muted:#94a3b8;
@@ -30,6 +31,7 @@
     --danger: rgba(239,68,68,.22); --danger-border: rgba(239,68,68,.55);
     --success: rgba(34,197,94,.22); --success-border: rgba(34,197,94,.55);
     --sticky: color-mix(in oklab, var(--panel) 96%, transparent);
+    --hl: rgba(250,204,21,.12); --hl-border: rgba(250,204,21,.45);
   }
   html { font-size: calc(16px * var(--scale, 1)); }
   html[data-scale="0.9"]{ --scale: .9; }
@@ -60,46 +62,33 @@
   }
   html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select { background:#111827; }
 
-  .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  .rank-pill{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; }
+  .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px; display:grid; gap:10px; }
+  .lb-title{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .lb-title .hint{ color:var(--muted); font-size:.9rem; }
+  .lb-grid{ display:grid; grid-template-columns: 1fr; gap:8px; }
+  .lb-block{ border:1px solid var(--border); border-radius:12px; padding:8px; }
+  .lb-block.highlight{ background: var(--hl); border-color: var(--hl-border); }
+  .lb-block h4{ margin:0 0 6px 0; font-size:1rem; }
+  .rank-pill{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; display:inline-block; margin:2px 6px 2px 0; }
   .muted { color: var(--muted); }
 
-  .table-wrap{
-    background: var(--panel); border:1px solid var(--border); border-radius: var(--radius);
-    overflow: auto;
-  }
+  .table-wrap{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); overflow: auto; }
   table { width:100%; border-collapse: separate; border-spacing: 0; min-width: 760px; }
-  thead th{
-    position: sticky; top:0; z-index: 5;
-    background: var(--sticky);
-    border-bottom: 1px solid var(--border);
-    text-align: center;
-  }
-  th, td{
-    padding: var(--dense-pad) 6px;
-    border-bottom: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    background-clip: padding-box;
-    font-size: var(--dense-font);
-  }
+  thead th{ position: sticky; top:0; z-index: 5; background: var(--sticky); border-bottom: 1px solid var(--border); text-align: center; }
+  th, td{ padding: var(--dense-pad) 6px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); background-clip: padding-box; font-size: var(--dense-font); }
   th:last-child, td:last-child{ border-right: none; }
   tbody tr:nth-child(odd){ background: var(--row-alt); }
-
   th.cat, td.cat{ width: 220px; text-align: left; }
   th.player{ min-width: var(--col-min); }
-
   .player-head{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
   .player-head .name{ font-weight:700; text-align:center; }
   .player-head button{ min-height:30px; padding:6px 8px; font-size:.9rem; }
-
   .cell{ text-align: center; }
   .cell input[type="number"]{ width: var(--input-w); text-align:center; min-height:34px; margin: 0 auto; display:block; }
   .cell input.is-empty{ background: var(--danger); border-color: var(--danger-border); }
   .cell input.is-filled{ background: var(--success); border-color: var(--success-border); }
-
   th:first-child, td:first-child{ position: sticky; left: 0; z-index: 4; background: var(--sticky); }
   tr.last-row td{ position: sticky; bottom: 0; background: var(--sticky); z-index: 3; }
-
   .subtotal{ color: var(--muted); font-weight: 600; text-align:center; }
   .total{ font-weight:800; text-align:center; }
 
@@ -107,15 +96,7 @@
 
   .backdrop{ position: fixed; inset: 0; background: rgba(0,0,0,.35); display:none; z-index: 90; }
   .backdrop.open{ display:block; }
-  .modal{
-    position: fixed; z-index: 100;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: min(760px, calc(100vw - 32px));
-    background: var(--panel); color: var(--text);
-    border: 1px solid var(--border); border-radius: 16px; padding: 16px;
-    box-shadow: 0 24px 64px rgba(0,0,0,.25);
-    display:none;
-  }
+  .modal{ position: fixed; z-index: 100; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(760px, calc(100vw - 32px)); background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: 0 24px 64px rgba(0,0,0,.25); display:none; }
   .modal.open{ display:block; }
   .modal h3{ margin: 0 0 12px 0; font-size: 1.15rem; }
   .section{ margin-top: 8px; }
@@ -126,34 +107,23 @@
   .ghost-btn{ background: transparent; }
   .hidden-input{ display:none; }
   .danger-btn{ border-color: var(--danger-border); color: #7f1d1d; }
-  .toggle{ display:flex; align-items:center; gap:10px; }
 
-  /* Popover carousel for ranking modes */
-  .popover{
-    position:absolute; background: var(--panel); border:1px solid var(--border);
-    border-radius:12px; padding:8px; box-shadow: 0 12px 30px rgba(0,0,0,.22);
-    display:none; z-index:60;
-  }
-  .popover.open{ display:block; }
-  .carousel{ display:flex; align-items:center; gap:8px; }
-  .carousel .item{ padding:6px 10px; border-radius:10px; border:1px solid var(--border); white-space:nowrap; }
-  .carousel .item.active{ background: var(--accent-soft); border-color: var(--accent-border); font-weight:700; }
-
-  /* Stats modal */
+  /* Stats modal revised */
   .stats-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  .card{ border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--panel); }
+  .card{ border:1px solid var(--border); border-radius:12px; padding:12px; background: var(--panel); }
   .card h4{ margin:0 0 8px 0; }
-  .chart{ width:100%; height:140px; }
+  .mini{ font-size:.95rem; }
+  .kv{ display:grid; grid-template-columns: auto 1fr; gap:6px 10px; align-items:center; }
+  .kv b{ text-align:right; }
+  .chart{ width:100%; height:160px; }
 
-  /* Print view */
+  /* Print */
   #printView{ display:none; }
   @media print{
     @page{ size: A4 landscape; margin: 12mm; }
     header, .toolbar, .settings-btn, .backdrop, .modal, main { display: none !important; }
     body{ background:white; }
     #printView{ display:block !important; }
-    .leaderboard{ margin-bottom: 8px; }
-    .rank-pill{ border:1px solid #999 !important; background:#eee !important; }
     th, td{ border:1px solid #666 !important; background: white !important; color: black !important; }
   }
 </style>
@@ -162,7 +132,7 @@
   <header>
     <div>
       <h1>Yam’s — Scores & Classement</h1>
-      <div class="sub">Classement unifié (carousel), bouton de manche intelligent, stats avancées & export PDF riche.</div>
+      <div class="sub">Classement unifié (3 vues ensemble), bouton de manche unique, stats & graphiques clarifiés.</div>
     </div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
@@ -177,16 +147,11 @@
     </div>
 
     <section class="leaderboard" id="leaderboard">
-      <strong id="leaderboardTitle" style="cursor:pointer" title="Changer le type de classement">Classement — Manche actuelle</strong>
-      <div id="rankingPills"></div>
-      <span class="muted" id="leaderboardHint"></span>
-      <!-- popover for mode carousel -->
-      <div id="rankPopover" class="popover" role="dialog" aria-label="Changer le type de classement">
-        <div class="carousel">
-          <span class="item" data-mode="current">Manche actuelle</span>
-          <span class="item" data-mode="overall_avg">Toutes les manches (moyenne)</span>
-          <span class="item" data-mode="overall_wins">Classement par victoires</span>
-        </div>
+      <div class="lb-title" id="lbTitle"><strong>Classement (tap pour mettre en avant une vue)</strong> <span class="hint">Manche actuelle • Moyenne (global) • Victoires</span></div>
+      <div class="lb-grid">
+        <div class="lb-block" id="lb-current"><h4>Manche actuelle</h4><div id="lbCurrentPills"></div></div>
+        <div class="lb-block" id="lb-avg"><h4>Moyenne — toutes les manches</h4><div id="lbAvgPills"></div></div>
+        <div class="lb-block" id="lb-wins"><h4>Par victoires</h4><div id="lbWinsPills"></div></div>
       </div>
     </section>
 
@@ -198,11 +163,13 @@
     </div>
   </main>
 
-  <!-- Printable view -->
   <div id="printView">
-    <h2>Feuilles de score — Export</h2>
+    <h2>Export</h2>
+    <h3>Classements</h3>
     <div id="printLeaderboards"></div>
+    <h3>Scores par partie</h3>
     <div id="printRoundsTable"></div>
+    <h3>Stats par joueur</h3>
     <div id="printPlayersStats"></div>
   </div>
 
@@ -295,13 +262,12 @@
   ];
   const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
 
-  const STORAGE_KEY = "yams-app-pages-v6.1-table"; // compat scores en cours
-  const ROUNDS_KEY = "yams-rounds-v7"; // historique des manches
-  const ROUNDS_STATE_KEY = "yams-round-active"; // bool "1"/"0"
+  const STORAGE_KEY = "yams-app-pages-v6.1-table";
+  const ROUNDS_KEY = "yams-rounds-v7";
+  const ROUNDS_STATE_KEY = "yams-round-active";
   const THEME_KEY = "yams-theme-mode";
   const UI_KEY = "yams-ui-v7";
 
-  // Theme & UI
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
   function applyTheme(mode){
     let theme = mode; if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
@@ -328,7 +294,6 @@
   function saveUI(ui){ try{ localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch(e){} }
   let uiState = loadUI(); applyUI(uiState);
 
-  // State
   let state = loadState() || { players: [] };
   function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
@@ -337,7 +302,6 @@
   function saveRounds(){ try{ localStorage.setItem(ROUNDS_KEY, JSON.stringify(rounds)); } catch(e){} }
   let roundActive = localStorage.getItem(ROUNDS_STATE_KEY) === "1";
 
-  // Helpers
   function canonicalName(name){ return (name || "").trim().toLowerCase(); }
   function nameExists(name, exceptId=null){ const cn = canonicalName(name); return state.players.some(p => canonicalName(p.name) === cn && p.id !== exceptId); }
   function newPlayer(name){ const scores = {}; ALL_CATS.forEach(c => scores[c.key] = ""); return { id: crypto.randomUUID(), name, scores }; }
@@ -348,15 +312,8 @@
   function totals(scores){ const u = sumUpper(scores), b = bonus(u), l = sumLower(scores); return { upper:u, bonus:b, lower:l, total:u + b + l }; }
   function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"}[s])); }
   function countFilled(scores){ return Object.values(scores).filter(v => v !== "" && v != null).length; }
-  function categoryProgress(scores){
-    // progression % par rapport au max possible par catégorie (0..1)
-    let sum=0, maxSum=0;
-    CATS_UPPER.forEach(c=>{ const v=num(scores[c.key]); sum += v; maxSum += c.max; });
-    CATS_LOWER.forEach(c=>{ const v=num(scores[c.key]); sum += v; maxSum += c.max; });
-    return maxSum ? sum/maxSum : 0;
-  }
+  function categoryProgress(scores){ let sum=0, maxSum=0; CATS_UPPER.forEach(c=>{ sum += num(scores[c.key]); maxSum += c.max; }); CATS_LOWER.forEach(c=>{ sum += num(scores[c.key]); maxSum += c.max; }); return maxSum ? sum/maxSum : 0; }
 
-  // Build table
   const thead = document.getElementById("thead");
   const tbody = document.getElementById("tbody");
 
@@ -382,12 +339,12 @@
           const trimmed = newName.trim();
           if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
           if (nameExists(trimmed, p.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
-          p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboard();
+          p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboards();
         }
       });
       th.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
         if (confirm(`Supprimer ${p.name || "ce joueur"} ?`)){
-          state.players = state.players.filter(pl => pl.id !== p.id); saveState(); buildTable(); renderLeaderboard();
+          state.players = state.players.filter(pl => pl.id !== p.id); saveState(); buildTable(); renderLeaderboards();
         }
       });
       trHead.appendChild(th);
@@ -410,7 +367,7 @@
           input.addEventListener("input", ()=>{
             const raw = input.value.replace(/[^\d]/g, ""); const v = raw === "" ? "" : clampInt(raw, 0, max ?? 200);
             if (String(v) != input.value){ input.value = v; }
-            p.scores[key] = raw === "" ? "" : v; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboard();
+            p.scores[key] = raw === "" ? "" : v; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboards();
           });
           td.appendChild(input);
         } else { td.textContent=""; }
@@ -444,31 +401,21 @@
     setCellText(totalRow, colIdx, t.total, "total");
   }
 
-  // Ranking unified with modes & popover carousel
-  let rankingMode = localStorage.getItem("yams-rank-mode") || "current"; // current | overall_avg | overall_wins
-  const leaderboardTitle = document.getElementById("leaderboardTitle");
-  const pop = document.getElementById("rankPopover");
-  leaderboardTitle.addEventListener("click", (e)=>{
-    // position popover near title
-    const rect = leaderboardTitle.getBoundingClientRect();
-    pop.style.top = (rect.bottom + window.scrollY + 8) + "px";
-    pop.style.left = Math.max(8, rect.left + window.scrollX - 20) + "px";
-    pop.classList.toggle("open");
-    renderPopover();
+  // Leaderboards unified (3 blocks)
+  const lbTitle = document.getElementById("lbTitle");
+  const lbCurrentPills = document.getElementById("lbCurrentPills");
+  const lbAvgPills = document.getElementById("lbAvgPills");
+  const lbWinsPills = document.getElementById("lbWinsPills");
+  const lbBlocks = ["lb-current","lb-avg","lb-wins"];
+  let hlIndex = 0;
+  lbTitle.addEventListener("click", ()=>{
+    // loop highlight
+    document.getElementById(lbBlocks[hlIndex]).classList.remove("highlight");
+    hlIndex = (hlIndex + 1) % lbBlocks.length;
+    document.getElementById(lbBlocks[hlIndex]).classList.add("highlight");
   });
-  document.addEventListener("click", (e)=>{
-    if (!pop.contains(e.target) && e.target !== leaderboardTitle){ pop.classList.remove("open"); }
-  });
-  function renderPopover(){
-    pop.querySelectorAll(".item").forEach(it=>{
-      const mode = it.getAttribute("data-mode");
-      it.classList.toggle("active", mode === rankingMode);
-      it.onclick = ()=>{ rankingMode = mode; localStorage.setItem("yams-rank-mode", rankingMode); pop.classList.remove("open"); renderLeaderboard(); };
-    });
-  }
 
   function winsTable(){
-    // returns wins count per player from rounds
     const wins = {}; state.players.forEach(p => wins[p.id]=0);
     rounds.forEach(r => {
       let best = -Infinity, bestId=null;
@@ -478,71 +425,49 @@
     return wins;
   }
 
-  function renderLeaderboard(){
-    const title = document.getElementById("leaderboardTitle");
-    const cont = document.getElementById("rankingPills");
-    const hint = document.getElementById("leaderboardHint");
-    cont.innerHTML = "";
-    if (rankingMode === "current"){
-      title.textContent = "Classement — Manche actuelle";
-      const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }))
-                                .sort((a,b)=> b.total - a.total);
-      data.forEach((r, i)=>{
-        const span = document.createElement("span"); span.className = "rank-pill"; span.textContent = `${i+1}. ${r.name} — ${r.total}`; cont.appendChild(span);
-      });
-    } else if (rankingMode === "overall_avg"){
-      title.textContent = "Classement — Toutes les manches (moyenne)";
-      const data = state.players.map(p => {
-        const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0, wins: st.wins||0 };
-      }).sort((a,b)=> b.avg - a.avg);
-      data.forEach((r, i)=>{
-        const span = document.createElement("span"); span.className = "rank-pill"; span.textContent = `${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; cont.appendChild(span);
-      });
-    } else {
-      title.textContent = "Classement — Par victoires";
-      const wins = winsTable();
-      const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", w: wins[p.id]||0 }))
-                                .sort((a,b)=> b.w - a.w);
-      data.forEach((r, i)=>{
-        const span = document.createElement("span"); span.className = "rank-pill"; span.textContent = `${i+1}. ${r.name} — ${r.w} victoire(s)`; cont.appendChild(span);
-      });
-    }
-    hint.textContent = state.players.length ? "" : "Ajoutez au moins un joueur pour démarrer.";
+  function renderLeaderboards(){
+    // current
+    lbCurrentPills.innerHTML = "";
+    const cur = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
+    cur.forEach((r,i)=>{ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.total}`; lbCurrentPills.appendChild(s); });
+    // avg
+    lbAvgPills.innerHTML = "";
+    const avg = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
+    avg.forEach((r,i)=>{ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`; lbAvgPills.appendChild(s); });
+    // wins
+    lbWinsPills.innerHTML = "";
+    const wmap = winsTable();
+    const wr = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", w: wmap[p.id]||0 })).sort((a,b)=> b.w - a.w);
+    wr.forEach((r,i)=>{ const s=document.createElement("span"); s.className="rank-pill"; s.textContent=`${i+1}. ${r.name} — ${r.w} vic.`; lbWinsPills.appendChild(s); });
   }
 
   // Round toggle button (single)
   const roundToggleBtn = document.getElementById("roundToggleBtn");
-  function updateRoundBtn(){
-    roundToggleBtn.textContent = roundActive ? "Clôturer la manche" : "Nouvelle manche";
-  }
+  function updateRoundBtn(){ roundToggleBtn.textContent = roundActive ? "Clôturer la manche" : "Nouvelle manche"; }
   updateRoundBtn();
   roundToggleBtn.addEventListener('click', ()=>{
     if (!roundActive){
-      // start new round = reset scores
       if (!confirm("Commencer une nouvelle manche ? (réinitialise les cases)")) return;
       state.players.forEach(p => { Object.keys(p.scores).forEach(k => p.scores[k] = ""); });
-      saveState(); buildTable(); renderLeaderboard();
+      saveState(); buildTable(); renderLeaderboards();
       roundActive = true; localStorage.setItem(ROUNDS_STATE_KEY, "1"); updateRoundBtn();
     } else {
-      // close current round = record totals
       if (!state.players.length){ alert("Aucun joueur."); return; }
       const totalsMap = {}; state.players.forEach(p => totalsMap[p.id] = totalsForPlayer(p));
       rounds.push({ time: new Date().toISOString(), totals: totalsMap });
-      saveRounds();
-      alert("Manche enregistrée !");
-      roundActive = false; localStorage.setItem(ROUNDS_STATE_KEY, "0"); updateRoundBtn();
-      renderLeaderboard();
+      saveRounds(); alert("Manche enregistrée !");
+      roundActive = false; localStorage.setItem(ROUNDS_STATE_KEY, "0"); updateRoundBtn(); renderLeaderboards();
     }
   });
 
-  // History modal (unchanged list)
+  // History
   const historyModal = document.getElementById("historyModal");
   const historyList = document.getElementById("historyList");
   document.getElementById("openHistoryBtn").addEventListener('click', ()=>{ renderHistory(); backdrop.classList.add("open"); historyModal.classList.add("open"); });
   document.getElementById("closeHistory").addEventListener('click', ()=>{ backdrop.classList.remove("open"); historyModal.classList.remove("open"); });
   document.getElementById("clearHistoryBtn").addEventListener('click', ()=>{
     if (!rounds.length) return; if (!confirm("Effacer tout l’historique des manches ?")) return;
-    rounds = []; saveRounds(); renderHistory(); renderLeaderboard();
+    rounds = []; saveRounds(); renderHistory(); renderLeaderboards();
   });
   function renderHistory(){
     historyList.innerHTML = "";
@@ -560,7 +485,7 @@
     });
   }
 
-  // Stats helpers (multi-round)
+  // Stats (global)
   function getStatsAllRoundsForPlayer(id){
     const scores = rounds.map(r => r.totals[id]).filter(v => typeof v === "number");
     const count = scores.length;
@@ -569,7 +494,6 @@
     const avg = Math.round(sum / count);
     const best = Math.max(...scores);
     const worst = Math.min(...scores);
-    // wins & podiums
     let wins=0, podiums=0;
     rounds.forEach(r=>{
       const arr = Object.entries(r.totals).map(([pid,t])=>({pid, t:Number(t)||0})).sort((a,b)=>b.t-a.t);
@@ -578,11 +502,9 @@
       if (rank>-1 && rank<3) podiums++;
     });
     const winRate = Math.round( (wins / count) * 100 );
-    // recent average (last 5)
     const last5 = scores.slice(-5);
     const recentAvg = Math.round(last5.reduce((a,b)=>a+b,0)/last5.length);
     const trend = recentAvg - avg;
-    // best streak (consecutive wins)
     let bestStreak=0, cur=0;
     rounds.forEach(r=>{
       const arr = Object.entries(r.totals).map(([pid,t])=>({pid, t:Number(t)||0})).sort((a,b)=>b.t-a.t);
@@ -593,12 +515,12 @@
   function percentileCurrent(total){
     const totalsArr = state.players.map(p=> totals(p.scores).total );
     const sorted = totalsArr.slice().sort((a,b)=>a-b);
-    const rank = sorted.findIndex(x=>x>=total);
-    const idx = (rank===-1)?sorted.length-1:rank;
-    return Math.round( (idx+1)/sorted.length * 100 );
+    const idx = sorted.findIndex(x=>x>=total);
+    const pos = (idx===-1)?sorted.length-1:idx;
+    return Math.round( (pos+1)/Math.max(1,sorted.length) * 100 );
   }
 
-  // Player stats modal
+  // Stats modal (clear layout + axes on chart)
   const playerStatsModal = document.getElementById("playerStatsModal");
   const playerStatsContent = document.getElementById("playerStatsContent");
   document.getElementById("closePlayerStats").addEventListener('click', ()=>{ backdrop.classList.remove("open"); playerStatsModal.classList.remove("open"); });
@@ -607,39 +529,41 @@
     const p = state.players.find(x=>x.id===playerId); if (!p) return;
     const name = escapeHtml(p.name||"Joueur");
     const cur = totals(p.scores);
-    // rank in current
     const currentSorted = state.players.map(x=>({id:x.id, total: totals(x.scores).total})).sort((a,b)=>b.total-a.total);
     const rank = currentSorted.findIndex(x=>x.id===playerId)+1 || "-";
     const leader = currentSorted[0]; const me = currentSorted.find(x=>x.id===playerId) || {total:0};
     const diffLeader = leader ? (leader.total - me.total) : 0;
-    const myIndex = currentSorted.findIndex(x=>x.id===playerId);
-    const prev = (myIndex>0) ? currentSorted[myIndex-1] : null;
-    const next = (myIndex<currentSorted.length-1 && myIndex!==-1) ? currentSorted[myIndex+1] : null;
-    const gapPrev = prev ? (prev.total - me.total) : null;
-    const gapNext = next ? (me.total - next.total) : null;
     const filled = countFilled(p.scores); const totalCells = Object.keys(p.scores).length;
     const prog = Math.round(categoryProgress(p.scores)*100);
     const up = sumUpper(p.scores), lo = sumLower(p.scores), bon = bonus(up), need = Math.max(0, 63 - up);
     const perc = percentileCurrent(me.total);
 
     const all = getStatsAllRoundsForPlayer(playerId);
-    const svg = makeSparkline(all.scores);
+    const svg = makeChart(all.scores, "Manche n°", "Score total");
 
     playerStatsContent.innerHTML = `
-      <div class="stats-grid">
+      <div class="stats-grid mini">
         <div class="card">
           <h4>Manche actuelle — ${name}</h4>
-          <div>Total: <strong>${cur.total}</strong> (Haut: ${up}+${bon}, Bas: ${lo}) — Rang: <strong>${rank}</strong> / ${state.players.length}</div>
-          <div>Écart leader: ${diffLeader>0?`-${diffLeader}`:"leader"} ${gapPrev!=null?`• Écart au rang ${rank-1}: ${gapPrev>=0?`-${gapPrev}`:"-"}`:""}</div>
-          <div>Sur ${totalCells} cases: <strong>${filled}</strong> remplies — <strong>${prog}%</strong> de progression vs max catégorie</div>
-          <div>Bonus 63: ${bon?`✅ obtenu (+35)`:`❌ manque ${need} pts`}</div>
-          <div>Percentile vs table: ~${perc}ᵉ</div>
+          <div class="kv">
+            <b>Total</b><span>${cur.total} (Haut ${up}+${bon}, Bas ${lo})</span>
+            <b>Rang</b><span>${rank} / ${state.players.length} — Écart leader: ${diffLeader>0?`-${diffLeader}`:"—"}</span>
+            <b>Progression</b><span>${prog}% — Cases ${filled}/${totalCells} — Bonus 63: ${bon?`✅`:`❌ (${need} pts)`}</span>
+            <b>Percentile</b><span>~${perc}ᵉ</span>
+          </div>
         </div>
         <div class="card">
           <h4>Toutes les manches — ${name}</h4>
-          <div>Parties: <strong>${all.count}</strong> • Victoires: <strong>${all.wins}</strong> • Podiums: <strong>${all.podiums}</strong> • Win rate: <strong>${all.winRate}%</strong></div>
-          <div>Moyenne: <strong>${all.avg ?? "-"}</strong> • Meilleur: <strong>${all.best ?? "-"}</strong> • Pire: <strong>${all.worst ?? "-"}</strong></div>
-          <div>5 dernières: <strong>${all.recentAvg ?? "-"}</strong> • Tendance: <strong>${all.trend>0?`+${all.trend}`:all.trend}</strong> • Série de victoires max: <strong>${all.bestStreak}</strong></div>
+          <div class="kv">
+            <b>Parties</b><span>${all.count}</span>
+            <b>Victoires</b><span>${all.wins} (${all.winRate}%)</span>
+            <b>Podiums</b><span>${all.podiums}</span>
+            <b>Moyenne</b><span>${all.avg ?? "-"}</span>
+            <b>Meilleur / Pire</b><span>${all.best ?? "-"} / ${all.worst ?? "-"}</span>
+            <b>5 dernières</b><span>${all.recentAvg ?? "-"}</span>
+            <b>Tendance</b><span>${all.trend>0?`+${all.trend}`:all.trend}</span>
+            <b>Série (wins)</b><span>${all.bestStreak}</span>
+          </div>
           <div class="chart">${svg}</div>
         </div>
       </div>
@@ -647,9 +571,9 @@
     backdrop.classList.add("open"); playerStatsModal.classList.add("open");
   }
 
-  function makeSparkline(values){
+  function makeChart(values, xlabel, ylabel){
     if (!values || !values.length) return "<em class='muted'>Pas encore de parties</em>";
-    const w=300,h=120,p=6;
+    const w=360,h=160,p=28;
     const max = Math.max(...values, 1); const min = Math.min(...values, 0);
     const range = Math.max(1, max-min);
     const step = (w-2*p)/Math.max(1, values.length-1);
@@ -658,21 +582,60 @@
       const y = h - p - ((v-min)/range)*(h-2*p);
       return `${x},${y}`;
     }).join(" ");
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline></svg>`;
+    // axes + ticks
+    const y0 = h-p, x0 = p;
+    const yTicks = 4;
+    let ticks = "";
+    for(let i=0;i<=yTicks;i++){
+      const val = min + (range * i / yTicks);
+      const y = h - p - ((val-min)/range)*(h-2*p);
+      ticks += `<text x="${x0-6}" y="${y+4}" font-size="10" text-anchor="end">${Math.round(val)}</text>`;
+      ticks += `<line x1="${x0}" y1="${y}" x2="${w-p}" y2="${y}" stroke="currentColor" opacity="0.15"/>`;
+    }
+    // x labels at start/middle/end
+    const xLabels = `<text x="${x0}" y="${h-6}" font-size="10" text-anchor="middle">1</text>
+                     <text x="${(w)/2}" y="${h-6}" font-size="10" text-anchor="middle">${Math.ceil(values.length/2)}</text>
+                     <text x="${w-p}" y="${h-6}" font-size="10" text-anchor="middle">${values.length}</text>`;
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+      <line x1="${x0}" y1="${y0}" x2="${w-p}" y2="${y0}" stroke="currentColor" />
+      <line x1="${x0}" y1="${p/2}" x2="${x0}" y2="${y0}" stroke="currentColor" />
+      ${ticks}
+      ${xLabels}
+      <polyline fill="none" stroke="currentColor" stroke-width="2" points="${pts}"></polyline>
+      <text x="${w/2}" y="${p/2 - 6}" font-size="11" text-anchor="middle">${ylabel}</text>
+      <text x="${w/2}" y="${h-2}" font-size="11" text-anchor="middle">${xlabel}</text>
+    </svg>`;
   }
 
-  // Ranking data for export / all-round stats
-  function getStatsAllPlayers(){
+  // Export JSON with computed_stats
+  function buildComputedStats(){
     const wins = winsTable();
-    return state.players.map(p=>{
+    const playersStats = {};
+    state.players.forEach(p=>{
+      const curTot = totals(p.scores);
       const all = getStatsAllRoundsForPlayer(p.id);
-      return { id:p.id, name:p.name||"Joueur", ...all, wins: wins[p.id]||0 };
+      playersStats[p.id] = {
+        name: p.name || "Joueur",
+        current_round: {
+          total: curTot.total, upper: curTot.upper, bonus: curTot.bonus, lower: curTot.lower,
+          filled_cells: countFilled(p.scores),
+          progress_pct: Math.round(categoryProgress(p.scores)*100)
+        },
+        all_rounds: { **: "scores across all rounds",
+          count: all.count, wins: all.wins, win_rate: all.winRate, podiums: all.podiums,
+          avg: all.avg, best: all.best, worst: all.worst,
+          recent_avg_5: all.recentAvg, trend_vs_avg: all.trend, best_win_streak: all.bestStreak,
+          scores: all.scores
+        }
+      };
     });
+    return { players: playersStats, rounds_count: rounds.length };
   }
 
   // Export / Import / PDF
   document.getElementById("exportBtn").addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify({state, rounds}, null, 2)], {type:"application/json"});
+    const payload = { state, rounds, computed_stats: buildComputedStats() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "yams-data.json";
     document.body.appendChild(a); a.click();
@@ -689,7 +652,7 @@
         if (!data || !data.state || !Array.isArray(data.state.players)) throw new Error("Format invalide");
         state = data.state; saveState();
         rounds = Array.isArray(data.rounds) ? data.rounds : []; saveRounds();
-        buildTable(); renderLeaderboard(); updateRoundBtn();
+        buildTable(); renderLeaderboards(); updateRoundBtn();
       }catch(err){ alert("Fichier invalide : " + err.message); }
     };
     reader.readAsText(file);
@@ -706,11 +669,16 @@
     const wrapStats = document.getElementById("printPlayersStats");
     wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapStats.innerHTML = "";
 
-    // Leaderboards (current + overall avg + wins)
-    wrapLB.innerHTML = `<h3>Classements</h3>
-      <div><strong>Manche actuelle</strong>: ${buildLeaderboardHtmlCurrent()}</div>
-      <div style="margin-top:6px;"><strong>Toutes les manches (moyenne)</strong>: ${buildLeaderboardHtmlAvg()}</div>
-      <div style="margin-top:6px;"><strong>Par victoires</strong>: ${buildLeaderboardHtmlWins()}</div>`;
+    // Leaderboards
+    const lbCurrent = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
+    const lbAvg = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
+    const wmap = winsTable(); const lbWins = state.players.map(p => ({ name:p.name||"Sans nom", w: wmap[p.id]||0 })).sort((a,b)=> b.w - a.w);
+
+    wrapLB.innerHTML = `
+      <div><strong>Manche actuelle :</strong> ${lbCurrent.map((r,i)=>`${i+1}. ${r.name} — ${r.total}`).join(" • ") || "<em>Aucun joueur</em>"}</div>
+      <div><strong>Moyenne (global) :</strong> ${lbAvg.map((r,i)=>`${i+1}. ${r.name} — moy ${r.avg} (max ${r.best})`).join(" • ") || "<em>Aucun joueur</em>"}</div>
+      <div><strong>Par victoires :</strong> ${lbWins.map((r,i)=>`${i+1}. ${r.name} — ${r.w} vic.`).join(" • ") || "<em>Aucun joueur</em>"}</div>
+    `;
 
     // Rounds table
     const players = state.players;
@@ -720,42 +688,50 @@
       const tds = players.map(p => `<td style="text-align:right">${r.totals[p.id]??""}</td>`).join("");
       return `<tr><td>${i+1} — ${date}</td>${tds}</tr>`;
     }).join("");
-    wrapRounds.innerHTML = `<h3>Scores par partie</h3><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||"<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>"}</table>`;
+    wrapRounds.innerHTML = `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">${head}${rows||"<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>"}</table>`;
 
-    // Player stats
-    let statsHtml = "<h3>Stats par joueur</h3>";
-    const wins = winsTable();
+    // Player stats (compact blocks + chart with legend)
+    let statsHtml = "";
     state.players.forEach(p=>{
       const all = getStatsAllRoundsForPlayer(p.id);
-      const svg = makeSparkline(all.scores);
-      const cur = totals(p.scores).total;
+      const svg = makeChart(all.scores, "Manche n°", "Score total");
+      const cur = totals(p.scores);
       statsHtml += `<div style="margin:8px 0;padding:8px;border:1px solid #999">
-        <strong>${escapeHtml(p.name||"Joueur")}</strong><br/>
-        Manche actuelle: <strong>${cur}</strong> — Cases remplies: ${countFilled(p.scores)} — Prog. ~${Math.round(categoryProgress(p.scores)*100)}% — Bonus: ${sumUpper(p.scores)>=63? "OK (+35)" : "Non"}<br/>
-        Global: Moy ${all.avg??"-"} — Max ${all.best??"-"} — Min ${all.worst??"-"} — Parties ${all.count} — Gains ${wins[p.id]||0} — Podiums ${all.podiums} — WR ${all.winRate}% — 5 dernières ${all.recentAvg??"-"} — Tendance ${all.trend>0?`+${all.trend}`:all.trend} — Streak ${all.bestStreak}
+        <strong>${escapeHtml(p.name||"Joueur")}</strong>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div>
+            <u>Manche actuelle</u><br>
+            Total ${cur.total} (Haut ${cur.upper}+${cur.bonus}, Bas ${cur.lower})<br>
+            Cases ${countFilled(p.scores)} — Prog. ~${Math.round(categoryProgress(p.scores)*100)}% — Bonus ${cur.bonus? "OK" : "Non"}
+          </div>
+          <div>
+            <u>Toutes les manches</u><br>
+            Moy ${all.avg??"-"} • Max ${all.best??"-"} • Min ${all.worst??"-"}<br>
+            Parties ${all.count} • Wins ${all.wins} (${all.winRate}%) • Podiums ${all.podiums}<br>
+            5 der. ${all.recentAvg??"-"} • Tendance ${all.trend>0?`+${all.trend}`:all.trend} • Streak ${all.bestStreak}
+          </div>
+        </div>
         <div>${svg}</div>
       </div>`;
     });
     wrapStats.innerHTML = statsHtml;
   }
-  function buildLeaderboardHtmlCurrent(){
-    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
-    if (!data.length) return "<em>Aucun joueur</em>";
-    return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — ${r.total}`).join(" • ");
-  }
-  function buildLeaderboardHtmlAvg(){
-    const data = state.players.map(p => { const st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort((a,b)=> b.avg - a.avg);
-    if (!data.length) return "<em>Aucun joueur</em>";
-    return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — moy ${r.avg} (max ${r.best})`).join(" • ");
-  }
-  function buildLeaderboardHtmlWins(){
-    const wins = winsTable();
-    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", w: wins[p.id]||0 })).sort((a,b)=> b.w - a.w);
-    if (!data.length) return "<em>Aucun joueur</em>";
-    return data.map((r,i)=> `${i+1}. ${escapeHtml(r.name)} — ${r.w} vic.`).join(" • ");
-  }
 
-  // Settings & printing & cache
+  // UI: add/remove players, import/export, cache, settings
+  document.getElementById("addPlayerBtn").addEventListener('click', ()=>{
+    const nameInput = document.getElementById("playerName");
+    const name = (nameInput.value || "").trim();
+    if (!name){ alert("Entrez un nom de joueur."); nameInput.focus(); return; }
+    if (nameExists(name)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
+    const p = newPlayer(name);
+    state.players.push(p);
+    saveState(); buildTable(); renderLeaderboards();
+    nameInput.value = "";
+  });
+  document.getElementById("playerName").addEventListener('keydown', (e)=>{
+    if (e.key === "Enter") document.getElementById("addPlayerBtn").click();
+  });
+
   const settingsBtn = document.getElementById("settingsBtn");
   const backdrop = document.getElementById("backdrop");
   const modal = document.getElementById("settingsModal");
@@ -764,11 +740,9 @@
   function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
   settingsBtn.addEventListener("click", openSettings);
   closeSettings.addEventListener("click", closeSettingsModal);
-  backdrop.addEventListener("click", (e)=>{
-    const inAnyModal = document.getElementById("historyModal").classList.contains("open") || document.getElementById("playerStatsModal").classList.contains("open") || modal.classList.contains("open");
-    if (inAnyModal){ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); backdrop.classList.remove("open"); }
-  });
+  backdrop.addEventListener("click", ()=>{ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); });
 
+  document.getElementById("exportPdfBtn").addEventListener('click', ()=>{ buildPrintView(); window.print(); });
   document.getElementById("clearCacheBtn").addEventListener('click', async ()=>{
     if (!confirm("Vider le cache et redémarrer l’application ?")) return;
     try{
@@ -778,11 +752,11 @@
     location.reload();
   });
 
-  // Initial render
-  buildTable(); renderLeaderboard(); updateRoundBtn();
+  // Initial
+  buildTable(); renderLeaderboards(); updateRoundBtn();
 
   // SW
-  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v10.js")); }
+  if ("serviceWorker" in navigator){ window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v11.js")); }
 })();
 </script>
 </body>

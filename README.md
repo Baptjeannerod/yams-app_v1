@@ -1,1 +1,1 @@
-v7.2: Classement unifié via carousel (3 modes), bouton de manche unique (start/close), stats joueur enrichies (courant & global), export PDF complet.
+v7.3: Classement unifié (3 sous-blocs), stats épurées, graphiques avec axes/légendes, export JSON avec computed_stats, PDF clarifié.
