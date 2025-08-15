@@ -1,1 +1,1 @@
-v6.2: Restaure v6.1 (tableau, centrage, séparateurs, réglages, export/import, vider cache) + option Mode ultra-compact. Déployer sur GitHub Pages.
+v6.3: Limites corrigées (1→5,2→10,...,6→30) + coloration des champs (rouge si vide, vert si rempli). Conserve toutes les fonctionnalités.
