@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Yam’s — Yam’s PWA</title>
+<style>
+  :root{
+    --gap:14px; --radius:16px;
+    --bg:#f8fafc; --panel:#ffffff; --text:#0f172a; --muted:#475569;
+    --border: rgba(15,23,42,.15); --row-alt: rgba(2,6,23,.05);
+    --accent-soft: rgba(59,130,246,.12); --accent-border: rgba(59,130,246,.35);
+    --danger: rgba(239,68,68,.35); --danger-text:#7f1d1d;
+    --notice: rgba(59,130,246,.45); --notice-text:#1e3a8a;
+  }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial; }
+  header { position: sticky; top: 0; z-index: 10; backdrop-filter: saturate(180%) blur(6px);
+    padding: max(12px, env(safe-area-inset-top)) 16px 12px 16px; background: color-mix(in oklab, var(--panel) 85%, transparent); border-bottom:1px solid var(--border);
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
+  }
+  h1{ font-size: clamp(20px, 2.6vw, 28px); margin:0; line-height:1.2; }
+  .sub{ color:var(--muted); font-size: 1rem; }
+  main{ padding: 16px; display:grid; gap:16px; }
+  .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button, input{
+    background:#fff; color:var(--text); border:1px solid var(--border); padding:12px 14px; border-radius:12px; outline:none;
+    min-height:44px; /* Apple HIG tap target */
+    font-size:18px; /* prevent iOS zoom */
+  }
+  input[type="number"]{ width: 110px; text-align: right; -moz-appearance: textfield; }
+  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .players { display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:16px; }
+  .card { background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+  .card header { display:flex; align-items:center; justify-content:space-between; border:none; padding:0 0 8px 0; }
+  .name { font-weight:700; font-size:1.15rem; }
+  table { width:100%; border-collapse: collapse; margin-top:8px; }
+  th, td { border-bottom: 1px dashed var(--border); padding: 10px 6px; font-size:18px; }
+  th { text-align:left; color: var(--text); font-weight:700; }
+  td:last-child, th:last-child { text-align:right; }
+  .muted { color: var(--muted); font-size:16px; }
+  .total { font-weight:800; font-size:20px; }
+  .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+  .leaderboard h2 { margin:0 0 6px 0; font-size:1.1rem; }
+  .rank-row{ display:grid; grid-template-columns:40px 1fr 110px; gap:12px; align-items:center; padding:10px; border-radius:12px; }
+  .rank-row:nth-child(odd){ background: var(--row-alt); }
+  .rank-badge{ width:34px; height:34px; display:grid; place-items:center; background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius:50%; font-weight:800; }
+  .row-actions{ display:flex; gap:8px; }
+  .pill{ font-size:16px; padding:6px 10px; border-radius:999px; border:1px solid var(--border); }
+  .danger{ border-color: var(--danger); color: var(--danger-text); }
+  .notice{ border-color: var(--notice); color: var(--notice-text); }
+  .footer { color: var(--muted); font-size:16px; text-align:center; padding:12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .theme-toggle{ display:flex; align-items:center; gap:8px; border:1px solid var(--border); padding:8px 12px; border-radius:999px; cursor:pointer; user-select:none; background:#fff; }
+  .ios-tip{ color: var(--muted); font-size: 15px; }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f172a; --panel:#0b1220; --text:#e2e8f0; --muted:#94a3b8;
+      --border: rgba(148,163,184,.25); --row-alt: rgba(2,6,23,.35);
+      --accent-soft: rgba(59,130,246,.15); --accent-border: rgba(59,130,246,.35);
+      --danger: rgba(239,68,68,.5); --danger-text:#fecaca;
+      --notice: rgba(59,130,246,.5); --notice-text:#bfdbfe;
+    }
+    button, input, .theme-toggle { background: #111827; }
+  }
+</style>
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Yam’s — Score iPad</h1>
+      <div class="sub">Gros boutons, saisie sans zoom, classement instantané. 🌗 Jour/Nuit auto (suivant l’iPad).</div>
+      <div class="ios-tip">Astuce: pour ajouter à l’écran d’accueil depuis Safari: <strong>Partager</strong> → <strong>Sur l’écran d’accueil</strong>.</div>
+    </div>
+    <div class="toolbar">
+      <input id="playerName" placeholder="Nom du joueur" />
+      <button id="addPlayerBtn">Ajouter</button>
+      <button id="resetAllBtn">Tout réinitialiser</button>
+      <button id="exportBtn">Exporter</button>
+      <button id="importBtn">Importer</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="leaderboard" id="leaderboard">
+      <h2>Classement</h2>
+      <div id="rankingRows"></div>
+      <div class="muted" id="leaderboardHint"></div>
+    </section>
+    <section class="players" id="players"></section>
+  </main>
+
+  <div class="footer">Bonus +35 si (1→6) ≥ 63. Limites: 1×6, 2×12, 3×18, 4×24, 5×30, 6×36, Brelan/Carré/Chance 30, Full 25, Petite 30, Grande 40, Yam’s 50.</div>
+
+<script>
+(function(){
+  const CATS_UPPER = [
+    {key:'ones',   label:'1 ×', hint:'Somme des 1', max:6},
+    {key:'twos',   label:'2 ×', hint:'Somme des 2', max:12},
+    {key:'threes', label:'3 ×', hint:'Somme des 3', max:18},
+    {key:'fours',  label:'4 ×', hint:'Somme des 4', max:24},
+    {key:'fives',  label:'5 ×', hint:'Somme des 5', max:30},
+    {key:'sixes',  label:'6 ×', hint:'Somme des 6', max:36},
+  ];
+  const CATS_LOWER = [
+    {key:'threeKind', label:'Brelan',        hint:'Somme des dés', max:30},
+    {key:'fourKind',  label:'Carré',         hint:'Somme des dés', max:30},
+    {key:'fullHouse', label:'Full',          hint:'25 pts',        max:25},
+    {key:'smallStr',  label:'Petite suite',  hint:'30 pts',        max:30},
+    {key:'largeStr',  label:'Grande suite',  hint:'40 pts',        max:40},
+    {key:'yahtzee',   label:'Yam’s',         hint:'50 pts',        max:50},
+    {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
+  ];
+  const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
+  const STORAGE_KEY = "yams-app-ipad-v5";
+
+  let state = loadState() || { players: [] };
+
+  function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
+  function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
+  function newPlayer(name){
+    const scores = {}; ALL_CATS.forEach(c => scores[c.key] = "");
+    return { id: crypto.randomUUID(), name, scores };
+  }
+
+  const playersEl = document.getElementById("players");
+
+  function num(v){ const n = Number(v); return isFinite(n) ? n : 0; }
+  function sumUpper(scores){ return CATS_UPPER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
+  function sumLower(scores){ return CATS_LOWER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
+  function bonus(upper){ return upper >= 63 ? 35 : 0; }
+  function totals(scores){
+    const u = sumUpper(scores), b = bonus(u), l = sumLower(scores);
+    return { upper:u, bonus:b, lower:l, total:u + b + l };
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
+  }
+
+  function buildPlayerCard(player){
+    const wrap = document.createElement("div"); wrap.className = "card"; wrap.dataset.playerId = player.id;
+    const head = document.createElement("header");
+    head.innerHTML = `
+      <div class="name">${escapeHtml(player.name || "Sans nom")}</div>
+      <div class="row-actions">
+        <span class="pill notice">Total: <span class="val-total">0</span></span>
+        <button data-action="rename">Renommer</button>
+        <button class="danger" data-action="delete">Supprimer</button>
+      </div>`;
+    wrap.appendChild(head);
+
+    const table = document.createElement("table");
+    const thead = document.createElement("thead"); thead.innerHTML = `<tr><th>Catégorie</th><th style="text-align:right">Score</th></tr>`; table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+
+    CATS_UPPER.forEach(cat => tbody.appendChild(rowForCat(player, cat)));
+    const trU = document.createElement("tr"); trU.innerHTML = `<td class="muted">Sous-total (1→6)</td><td style="text-align:right" class="muted"><span class="val-upper">0</span></td>`; tbody.appendChild(trU);
+    const trB = document.createElement("tr"); trB.innerHTML = `<td class="muted">Bonus (≥63)</td><td style="text-align:right" class="muted"><span class="val-bonus">0</span></td>`; tbody.appendChild(trB);
+    CATS_LOWER.forEach(cat => tbody.appendChild(rowForCat(player, cat)));
+    const trT = document.createElement("tr"); trT.innerHTML = `<td class="total">Total</td><td style="text-align:right" class="total"><span class="val-total">0</span></td>`; tbody.appendChild(trT);
+
+    table.appendChild(tbody); wrap.appendChild(table);
+
+    head.querySelector('[data-action="rename"]').addEventListener('click', ()=>{
+      const newName = prompt("Nouveau nom du joueur :", player.name || "");
+      if (newName !== null){
+        player.name = newName.trim();
+        head.querySelector(".name").textContent = player.name || "Sans nom";
+        saveState(); renderLeaderboard();
+      }
+    });
+    head.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
+      if (confirm(`Supprimer ${player.name || "ce joueur"} ?`)){
+        state.players = state.players.filter(pl => pl.id !== player.id);
+        saveState();
+        renderAllPlayers(); renderLeaderboard();
+      }
+    });
+
+    refreshPlayerComputedFields(player, wrap);
+    return wrap;
+  }
+
+  function rowForCat(player, cat){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td style="padding-right:12px">${cat.label} <span class="muted">(${cat.hint})</span></td>`;
+    const td = document.createElement("td"); td.style.textAlign = "right";
+    const input = document.createElement("input");
+    input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
+    input.placeholder = `0…${cat.max}`; input.min = "0"; input.step = "1"; input.title = `Score max: ${cat.max}`;
+    input.value = player.scores[cat.key];
+    input.addEventListener("keydown", (e)=>{ if (e.key === "ArrowUp" || e.key === "ArrowDown"){ e.preventDefault(); } });
+    input.addEventListener("input", ()=>{
+      const raw = input.value.replace(/[^\d]/g, "");
+      const v = raw === "" ? "" : clampInt(raw, 0, cat.max);
+      if (String(v) != input.value){ input.value = v; }
+      player.scores[cat.key] = raw === "" ? "" : v;
+      saveState();
+      const card = input.closest(".card");
+      refreshPlayerComputedFields(player, card);
+      renderLeaderboard();
+    });
+    td.appendChild(input); tr.appendChild(td);
+    return tr;
+  }
+
+  function clampInt(v, min, max){
+    let n = parseInt(v, 10);
+    if (!isFinite(n)) n = 0;
+    if (n < min) n = min;
+    if (n > max) n = max;
+    return n;
+  }
+
+  function refreshPlayerComputedFields(player, cardEl){
+    const t = totals(player.scores);
+    const headBadge = cardEl.querySelector("header .val-total"); if (headBadge) headBadge.textContent = t.total;
+    const u = cardEl.querySelector(".val-upper"); if (u) u.textContent = t.upper;
+    const b = cardEl.querySelector(".val-bonus"); if (b) b.textContent = t.bonus;
+    const totalsInTable = cardEl.querySelectorAll("td .val-total"); totalsInTable.forEach(el => el.textContent = t.total);
+  }
+
+  function renderAllPlayers(){
+    playersEl.innerHTML = "";
+    state.players.forEach(p => playersEl.appendChild(buildPlayerCard(p)));
+  }
+
+  function renderLeaderboard(){
+    const rowsEl = document.getElementById("rankingRows");
+    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total })).sort((a,b)=> b.total - a.total);
+    rowsEl.innerHTML = "";
+    data.forEach((r, idx)=>{
+      const div = document.createElement("div");
+      div.className = "rank-row";
+      div.innerHTML = `<div class="rank-badge">${idx+1}</div><div>${escapeHtml(r.name)}</div><div style="text-align:right; font-weight:800">${r.total}</div>`;
+      rowsEl.appendChild(div);
+    });
+    document.getElementById("leaderboardHint").textContent =
+      state.players.length ? "Classement mis à jour à chaque saisie." : "Ajoutez au moins un joueur pour démarrer.";
+  }
+
+  // Toolbar
+  document.getElementById("addPlayerBtn").addEventListener('click', ()=>{
+    const nameInput = document.getElementById("playerName");
+    const name = (nameInput.value || "").trim();
+    if (!name){ alert("Entrez un nom de joueur."); nameInput.focus(); return; }
+    const p = newPlayer(name);
+    state.players.push(p);
+    saveState();
+    playersEl.appendChild(buildPlayerCard(p));
+    renderLeaderboard();
+    nameInput.value = "";
+  });
+  document.getElementById("playerName").addEventListener('keydown', (e)=>{
+    if (e.key === "Enter") document.getElementById("addPlayerBtn").click();
+  });
+  document.getElementById("resetAllBtn").addEventListener('click', ()=>{
+    if (!state.players.length) return;
+    if (confirm("Effacer toutes les feuilles de score ?")){
+      state = { players: [] };
+      saveState();
+      renderAllPlayers();
+      renderLeaderboard();
+    }
+  });
+  document.getElementById("exportBtn").addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "yams-scores.json";
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+  });
+  document.getElementById("importBtn").addEventListener('click', ()=>{
+    const input = document.createElement("input"); input.type = "file"; input.accept = "application/json";
+    input.addEventListener('change', ()=>{
+      const file = input.files && input.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const data = JSON.parse(String(reader.result));
+          if (!data || !Array.isArray(data.players)) throw new Error("Format invalide");
+          state = data; saveState();
+          renderAllPlayers(); renderLeaderboard();
+        }catch(err){ alert("Fichier invalide : " + err.message); }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  });
+
+  // First paint
+  renderAllPlayers();
+  renderLeaderboard();
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"))}</script></body>
+</html>
