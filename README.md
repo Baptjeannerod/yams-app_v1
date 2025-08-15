@@ -1,1 +1,1 @@
-v7.3.1 hotfix: fixed JSON build syntax, added error overlay, default highlight set, cache-busting SW.
+v7.4: Classement totalement unifié (tableau unique), stats FR ultra-lisibles, PDF FR repensé, nouveau SW.
