@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr" data-theme="light" data-scale="1" data-cols="2">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest?v=3">
+<link rel="manifest" href="manifest.webmanifest?v=4">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Scores & Classement</title>
 <style>
@@ -27,7 +27,15 @@
     --danger: rgba(239,68,68,.5); --danger-text:#fecaca;
     --notice: rgba(59,130,246,.5); --notice-text:#bfdbfe;
   }
-  html, body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial; }
+  /* Zoom: base scaling variable driven by data-scale (0.9 / 1 / 1.1) */
+  html { font-size: calc(16px * var(--scale, 1)); }
+  html[data-scale="0.9"]{ --scale: .9; }
+  html[data-scale="1"]{ --scale: 1; }
+  html[data-scale="1.1"]{ --scale: 1.1; }
+
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial;
+  }
   header { position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(180%) blur(6px);
     padding: max(12px, env(safe-area-inset-top)) 16px 12px 16px; background: color-mix(in oklab, var(--panel) 85%, transparent); border-bottom:1px solid var(--border);
     display:flex; align-items:center; gap:12px;
@@ -39,31 +47,38 @@
   .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
   button, input{
     background:#fff; color:var(--text); border:1px solid var(--border); padding:12px 14px; border-radius:12px; outline:none;
-    min-height:44px; font-size:18px;
+    min-height:44px; font-size:1rem;
   }
   html[data-theme="dark"] button, html[data-theme="dark"] input { background:#111827; }
-  input[type="number"]{ width: 110px; text-align: right; -moz-appearance: textfield; }
+  input[type="number"]{ width: 6.9rem; text-align: right; -moz-appearance: textfield; }
   input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .players { display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:16px; }
+
+  /* Players grid: responsive & overridable by data-cols */
+  .players { display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+  html[data-cols="1"] .players{ grid-template-columns: 1fr; }
+  html[data-cols="2"] .players{ grid-template-columns: repeat(2, 1fr); }
+  html[data-cols="3"] .players{ grid-template-columns: repeat(3, 1fr); }
+  html[data-cols="4"] .players{ grid-template-columns: repeat(4, 1fr); }
+
   .card { background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
   .card header { display:flex; align-items:center; justify-content:space-between; border:none; padding:0 0 8px 0; }
   .name { font-weight:700; font-size:1.15rem; }
   table { width:100%; border-collapse: collapse; margin-top:8px; }
-  th, td { border-bottom: 1px dashed var(--border); padding: 10px 6px; font-size:18px; }
+  th, td { border-bottom: 1px dashed var(--border); padding: 10px 6px; font-size:1rem; }
   th { text-align:left; color: var(--text); font-weight:700; }
   td:last-child, th:last-child { text-align:right; }
-  .muted { color: var(--muted); font-size:16px; }
-  .total { font-weight:800; font-size:20px; }
+  .muted { color: var(--muted); font-size:.95rem; }
+  .total { font-weight:800; font-size:1.1rem; }
   .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
-  .leaderboard h2 { margin:0 0 6px 0; font-size:1.1rem; }
+  .leaderboard h2 { margin:0 0 6px 0; font-size:1.05rem; }
   .rank-row{ display:grid; grid-template-columns:40px 1fr 110px; gap:12px; align-items:center; padding:10px; border-radius:12px; }
   .rank-row:nth-child(odd){ background: var(--row-alt); }
   .rank-badge{ width:34px; height:34px; display:grid; place-items:center; background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius:50%; font-weight:800; }
   .row-actions{ display:flex; gap:8px; }
-  .pill{ font-size:16px; padding:6px 10px; border-radius:999px; border:1px solid var(--border); }
+  .pill{ font-size:.95rem; padding:6px 10px; border-radius:999px; border:1px solid var(--border); }
   .danger{ border-color: var(--danger); color: var(--danger-text); }
   .notice{ border-color: var(--notice); color: var(--notice-text); }
-  .footer { color: var(--muted); font-size:16px; text-align:center; padding:12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .footer { color: var(--muted); font-size:.95rem; text-align:center; padding:12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 
   /* Settings button (top-right) */
   .settings-btn{
@@ -80,19 +95,23 @@
   .modal{
     position: fixed; z-index: 100;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: min(520px, calc(100vw - 32px));
+    width: min(560px, calc(100vw - 32px));
     background: var(--panel); color: var(--text);
     border: 1px solid var(--border); border-radius: 16px; padding: 16px;
     box-shadow: 0 24px 64px rgba(0,0,0,.25);
     display:none;
   }
   .modal.open{ display:block; }
-  .modal h3{ margin: 0 0 12px 0; font-size: 1.1rem; }
-  .radio-row{ display:flex; align-items:center; gap:10px; padding:8px 0; }
-  .modal .actions{ display:flex; gap:10px; flex-wrap: wrap; margin-top: 12px; }
+  .modal h3{ margin: 0 0 12px 0; font-size: 1.15rem; }
+  .section{ margin-top: 8px; }
+  .section h4{ margin: 8px 0; font-size: 1rem; }
+  .radio-row, .row{ display:flex; align-items:center; gap:10px; padding:8px 0; flex-wrap: wrap; }
+  .modal .actions{ display:flex; gap:10px; flex-wrap: wrap; margin-top: 6px; }
   .modal .close-line{ display:flex; justify-content:flex-end; }
   .ghost-btn{ background: transparent; }
   .hidden-input{ display:none; }
+  .danger-btn{ border-color: var(--danger); color: var(--danger-text); }
+  .select{ min-width: 160px; }
 </style>
 </head>
 <body>
@@ -127,16 +146,43 @@
   <div id="settingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <div class="close-line"><button id="closeSettings" class="ghost-btn" aria-label="Fermer">✕</button></div>
     <h3 id="settingsTitle">Réglages</h3>
-    <div>
-      <strong>Thème</strong>
-      <div class="radio-row"><input type="radio" name="themeMode" id="themeAuto" value="auto"><label for="themeAuto">Auto (suivre l’appareil)</label></div>
-      <div class="radio-row"><input type="radio" name="themeMode" id="themeLight" value="light"><label for="themeLight">Clair</label></div>
-      <div class="radio-row"><input type="radio" name="themeMode" id="themeDark" value="dark"><label for="themeDark">Sombre</label></div>
+
+    <div class="section">
+      <h4>Thème</h4>
+      <div class="radio-row">
+        <label><input type="radio" name="themeMode" value="auto"> Auto (appareil)</label>
+        <label><input type="radio" name="themeMode" value="light"> Clair</label>
+        <label><input type="radio" name="themeMode" value="dark"> Sombre</label>
+      </div>
     </div>
-    <div class="actions">
-      <button id="exportBtn">Exporter</button>
-      <button id="importBtn">Importer</button>
-      <input id="importFile" class="hidden-input" type="file" accept="application/json" />
+
+    <div class="section">
+      <h4>Affichage</h4>
+      <div class="row">
+        <label>Zoom :</label>
+        <button class="ghost-btn" data-zoom="0.9">Petit</button>
+        <button class="ghost-btn" data-zoom="1">Normal</button>
+        <button class="ghost-btn" data-zoom="1.1">Grand</button>
+      </div>
+      <div class="row">
+        <label for="colsSelect">Joueurs par ligne :</label>
+        <select id="colsSelect" class="select">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Données</h4>
+      <div class="actions">
+        <button id="exportBtn">Exporter</button>
+        <button id="importBtn">Importer</button>
+        <button id="clearCacheBtn" class="danger-btn" title="Supprimer les caches et le service worker">Vider le cache</button>
+        <input id="importFile" class="hidden-input" type="file" accept="application/json" />
+      </div>
     </div>
   </div>
 
@@ -160,8 +206,9 @@
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
   const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
-  const STORAGE_KEY = "yams-app-pages-v4";
+  const STORAGE_KEY = "yams-app-pages-v5";
   const THEME_KEY = "yams-theme-mode"; // 'auto' | 'light' | 'dark'
+  const UI_KEY = "yams-ui"; // { scale, cols }
 
   /** Theme handling **/
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -169,8 +216,8 @@
     let theme = mode;
     if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
     document.documentElement.setAttribute("data-theme", theme);
-    const id = mode === "auto" ? "themeAuto" : (mode === "dark" ? "themeDark" : "themeLight");
-    const el = document.getElementById(id); if (el) el.checked = true;
+    // set radio
+    document.querySelectorAll('input[name="themeMode"]').forEach(r=> r.checked = (r.value === mode));
   }
   function initTheme(){
     let mode = localStorage.getItem(THEME_KEY) || "auto";
@@ -180,6 +227,61 @@
     });
   }
   initTheme();
+
+  /** UI (zoom + columns) **/
+  function applyUI(ui){
+    if (!ui) return;
+    if (ui.scale){ document.documentElement.setAttribute("data-scale", String(ui.scale)); }
+    if (ui.cols){ document.documentElement.setAttribute("data-cols", String(ui.cols)); }
+    const sel = document.getElementById("colsSelect");
+    if (sel) sel.value = String(ui.cols || 2);
+  }
+  function loadUI(){
+    try { return JSON.parse(localStorage.getItem(UI_KEY) || "{}"); } catch(e){ return {}; }
+  }
+  function saveUI(ui){
+    try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch(e){}
+  }
+  let uiState = Object.assign({ scale: 1, cols: 2 }, loadUI());
+  applyUI(uiState);
+
+  // Settings modal behavior
+  const settingsBtn = document.getElementById("settingsBtn");
+  const backdrop = document.getElementById("backdrop");
+  const modal = document.getElementById("settingsModal");
+  const closeSettings = document.getElementById("closeSettings");
+
+  function openSettings(){ backdrop.classList.add("open"); modal.classList.add("open"); }
+  function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
+  settingsBtn.addEventListener("click", openSettings);
+  closeSettings.addEventListener("click", closeSettingsModal);
+  backdrop.addEventListener("click", closeSettingsModal);
+  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeSettingsModal(); });
+
+  // Theme radio in modal
+  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
+    r.addEventListener("change", ()=>{
+      const mode = r.value;
+      try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
+      applyTheme(mode);
+    });
+  });
+
+  // Zoom buttons
+  document.querySelectorAll('[data-zoom]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.getAttribute('data-zoom');
+      uiState.scale = val;
+      applyUI(uiState);
+      saveUI(uiState);
+    });
+  });
+  // Columns selector
+  document.getElementById("colsSelect").addEventListener('change', (e)=>{
+    uiState.cols = Number(e.target.value);
+    applyUI(uiState);
+    saveUI(uiState);
+  });
 
   // State
   let state = loadState() || { players: [] };
@@ -344,35 +446,22 @@
     }
   });
 
-  // Settings modal behavior
-  const settingsBtn = document.getElementById("settingsBtn");
-  const backdrop = document.getElementById("backdrop");
-  const modal = document.getElementById("settingsModal");
-  const closeSettings = document.getElementById("closeSettings");
-
-  function openSettings(){
-    backdrop.classList.add("open");
-    modal.classList.add("open");
-  }
-  function closeSettingsModal(){
-    backdrop.classList.remove("open");
-    modal.classList.remove("open");
-  }
-  settingsBtn.addEventListener("click", openSettings);
-  closeSettings.addEventListener("click", closeSettingsModal);
-  backdrop.addEventListener("click", closeSettingsModal);
-  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeSettingsModal(); });
-
-  // Theme radio in modal
-  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
-    r.addEventListener("change", ()=>{
-      const mode = r.value;
-      try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
-      applyTheme(mode);
-    });
+  // Settings modal hooks
+  const clearCacheBtn = document.getElementById("clearCacheBtn");
+  clearCacheBtn.addEventListener('click', async ()=>{
+    if (!confirm("Vider le cache et redémarrer l’application ?")) return;
+    try{
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      if (navigator.serviceWorker){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+    }catch(e){ console.warn(e); }
+    location.reload();
   });
 
-  // Export / Import (now in modal)
+  // Export / Import (in modal)
   document.getElementById("exportBtn").addEventListener('click', ()=>{
     const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
@@ -402,7 +491,7 @@
 
   // PWA SW (versioned filename to force update)
   if ("serviceWorker" in navigator){
-    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v3.js"));
+    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v4.js"));
   }
 })();
 </script>

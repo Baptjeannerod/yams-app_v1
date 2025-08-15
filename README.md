@@ -1,1 +1,1 @@
-Déployez sur GitHub Pages. v4: réglages en haut à droite (⚙︎), modal centrée, exporter/importer dans Réglages.
+Déployez sur GitHub Pages. v5: nouveau Réglages, Zoom, Joueurs par ligne, bouton Vider le cache, SW v4.
