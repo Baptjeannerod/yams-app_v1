@@ -1,26 +1,546 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light" data-scale="1">
+<html lang="fr" data-theme="light" data-scale="1" data-uc="0">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest?v=6">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Scores & Classement</title>
 <style>
   :root{
-    --border: rgba(15,23,42,.22);
+    --radius:12px;
+    --bg:#f8fafc; --panel:#ffffff; --text:#0f172a; --muted:#475569;
+    --border: rgba(15,23,42,.22); /* Plus contrasté pour Mac */
+    --row-alt: rgba(2,6,23,.05);
+    --accent-soft: rgba(59,130,246,.12); --accent-border: rgba(59,130,246,.35);
+    --danger: rgba(239,68,68,.35); --danger-text:#7f1d1d;
+    --notice: rgba(59,130,246,.45); --notice-text:#1e3a8a;
+    --sticky: color-mix(in oklab, var(--panel) 92%, transparent);
   }
-  html, body { margin:0; font-family: sans-serif; background:#f8fafc; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid var(--border); text-align:center; padding: 6px; }
-  .uc th, .uc td { padding: 2px; font-size: 0.8rem; }
+  html[data-theme="dark"]{
+    --bg:#0f172a; --panel:#0b1220; --text:#e2e8f0; --muted:#94a3b8;
+    --border: rgba(148,163,184,.35);
+    --row-alt: rgba(2,6,23,.35);
+    --accent-soft: rgba(59,130,246,.15); --accent-border: rgba(59,130,246,.35);
+    --danger: rgba(239,68,68,.5); --danger-text:#fecaca;
+    --notice: rgba(59,130,246,.5); --notice-text:#bfdbfe;
+    --sticky: color-mix(in oklab, var(--panel) 96%, transparent);
+  }
+
+  /* Zoom (UI scale) */
+  html { font-size: calc(16px * var(--scale, 1)); }
+  html[data-scale="0.9"]{ --scale: .9; }
+  html[data-scale="1"]{ --scale: 1; }
+  html[data-scale="1.1"]{ --scale: 1.1; }
+
+  /* Ultra-compact */
+  html[data-uc="1"]{
+    --uc-font: .85rem;
+    --uc-pad: 4px;
+    --uc-input: 4.2rem;
+  }
+
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial;
+  }
+  header { position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(180%) blur(6px);
+    padding: max(12px, env(safe-area-inset-top)) 16px 12px 16px; background: color-mix(in oklab, var(--panel) 85%, transparent); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:12px;
+  }
+  h1{ font-size: clamp(20px, 2.6vw, 28px); margin:0; line-height:1.2; }
+  .sub{ color:var(--muted); font-size: 1rem; }
+  .spacer{ flex:1; }
+
+  main{ padding: 16px; display:grid; gap:16px; }
+
+  .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button, input{
+    background:#fff; color:var(--text); border:1px solid var(--border); padding:10px 12px; border-radius:10px; outline:none;
+    min-height:40px; font-size:1rem;
+  }
+  html[data-theme="dark"] button, html[data-theme="dark"] input { background:#111827; }
+
+  .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .rank-pill{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; }
+  .muted { color: var(--muted); }
+
+  /* Table */
+  .table-wrap{
+    background: var(--panel); border:1px solid var(--border); border-radius: var(--radius);
+    overflow: auto;
+  }
+  table { width:100%; border-collapse: separate; border-spacing: 0; min-width: 760px; }
+  thead th{
+    position: sticky; top:0; z-index: 5;
+    background: var(--sticky);
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+  th, td{
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background-clip: padding-box;
+  }
+  html[data-uc="1"] th, html[data-uc="1"] td{
+    padding: var(--uc-pad);
+    font-size: var(--uc-font);
+  }
+  th:last-child, td:last-child{ border-right: none; }
+  tbody tr:nth-child(odd){ background: var(--row-alt); }
+
+  th.cat, td.cat{ width: 220px; text-align: left; }
+  th.player{ min-width: 140px; }
+
+  .player-head{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .player-head .name{ font-weight:700; text-align:center; }
+
+  .cell{ text-align: center; }
+  .cell input[type="number"]{ width: 5.2rem; text-align:center; min-height:34px; margin: 0 auto; display:block; }
+  html[data-uc="1"] .cell input[type="number"]{ width: var(--uc-input); min-height: 30px; }
+
+  /* Sticky first column */
+  th:first-child, td:first-child{
+    position: sticky; left: 0; z-index: 4; background: var(--sticky);
+  }
+  .subtotal{ color: var(--muted); font-weight: 600; text-align:center; }
+  .total{ font-weight:800; text-align:center; }
+
+  /* Settings button (top-right) */
+  .settings-btn{
+    margin-left:auto;
+    width:40px; height:40px; display:grid; place-items:center; border-radius:10px;
+  }
+
+  /* Modal settings */
+  .backdrop{
+    position: fixed; inset: 0; background: rgba(0,0,0,.35);
+    display:none; z-index: 90;
+  }
+  .backdrop.open{ display:block; }
+  .modal{
+    position: fixed; z-index: 100;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(560px, calc(100vw - 32px));
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 16px; padding: 16px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.25);
+    display:none;
+  }
+  .modal.open{ display:block; }
+  .modal h3{ margin: 0 0 12px 0; font-size: 1.15rem; }
+  .section{ margin-top: 8px; }
+  .section h4{ margin: 8px 0; font-size: 1rem; }
+  .radio-row, .row{ display:flex; align-items:center; gap:10px; padding:8px 0; flex-wrap: wrap; }
+  .modal .actions{ display:flex; gap:10px; flex-wrap: wrap; margin-top: 6px; }
+  .modal .close-line{ display:flex; justify-content:flex-end; }
+  .ghost-btn{ background: transparent; }
+  .hidden-input{ display:none; }
+  .danger-btn{ border-color: var(--danger); color: var(--danger-text); }
+  .toggle{ display:flex; align-items:center; gap:10px; }
 </style>
 </head>
 <body>
-  <h1>Yam’s — Scores & Classement</h1>
-  <p>Mode ultra-compact en option</p>
-  <table id="scoreTable">
-    <tr><th>Catégorie</th><th>Joueur 1</th><th>Joueur 2</th></tr>
-    <tr><td>1 ×</td><td><input type="number" style="width:4em"></td><td><input type="number" style="width:4em"></td></tr>
-  </table>
-  <button onclick="document.getElementById('scoreTable').classList.toggle('uc')">Basculer ultra-compact</button>
+  <header>
+    <div>
+      <h1>Yam’s — Scores & Classement</h1>
+      <div class="sub">Vue tableau compacte. Saisie fluide, limites par catégorie, PWA iPad-friendly.</div>
+    </div>
+    <div class="spacer"></div>
+    <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <input id="playerName" placeholder="Nom du joueur" />
+      <button id="addPlayerBtn">Ajouter</button>
+      <button id="resetAllBtn">Tout réinitialiser</button>
+    </div>
+
+    <section class="leaderboard" id="leaderboard">
+      <strong>Classement</strong>
+      <div id="rankingPills"></div>
+      <span class="muted" id="leaderboardHint"></span>
+    </section>
+
+    <div class="table-wrap">
+      <table id="scoreTable">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="backdrop" class="backdrop"></div>
+  <div id="settingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="close-line"><button id="closeSettings" class="ghost-btn" aria-label="Fermer">✕</button></div>
+    <h3 id="settingsTitle">Réglages</h3>
+
+    <div class="section">
+      <h4>Thème</h4>
+      <div class="radio-row">
+        <label><input type="radio" name="themeMode" value="auto"> Auto (appareil)</label>
+        <label><input type="radio" name="themeMode" value="light"> Clair</label>
+        <label><input type="radio" name="themeMode" value="dark"> Sombre</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Affichage</h4>
+      <div class="row">
+        <label>Zoom :</label>
+        <button class="ghost-btn" data-zoom="0.9">Petit</button>
+        <button class="ghost-btn" data-zoom="1">Normal</button>
+        <button class="ghost-btn" data-zoom="1.1">Grand</button>
+      </div>
+      <div class="row toggle">
+        <input type="checkbox" id="ucToggle" />
+        <label for="ucToggle">Mode ultra-compact</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Données</h4>
+      <div class="actions">
+        <button id="exportBtn">Exporter</button>
+        <button id="importBtn">Importer</button>
+        <button id="clearCacheBtn" class="danger-btn" title="Supprimer les caches et le service worker">Vider le cache</button>
+        <input id="importFile" class="hidden-input" type="file" accept="application/json" />
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const CATS_UPPER = [
+    {key:'ones',   label:'1 ×', hint:'Somme des 1', max:6},
+    {key:'twos',   label:'2 ×', hint:'Somme des 2', max:12},
+    {key:'threes', label:'3 ×', hint:'Somme des 3', max:18},
+    {key:'fours',  label:'4 ×', hint:'Somme des 4', max:24},
+    {key:'fives',  label:'5 ×', hint:'Somme des 5', max:30},
+    {key:'sixes',  label:'6 ×', hint:'Somme des 6', max:36},
+  ];
+  const CATS_LOWER = [
+    {key:'threeKind', label:'Brelan',        hint:'Somme des dés', max:30},
+    {key:'fourKind',  label:'Carré',         hint:'Somme des dés', max:30},
+    {key:'fullHouse', label:'Full',          hint:'25 pts',        max:25},
+    {key:'smallStr',  label:'Petite suite',  hint:'30 pts',        max:30},
+    {key:'largeStr',  label:'Grande suite',  hint:'40 pts',        max:40},
+    {key:'yahtzee',   label:'Yam’s',         hint:'50 pts',        max:50},
+    {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
+  ];
+  const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
+  const STORAGE_KEY = "yams-app-pages-v6.1-table"; // on garde l'ancienne clé pour ne pas perdre tes scores
+  const THEME_KEY = "yams-theme-mode"; // 'auto' | 'light' | 'dark'
+  const UI_KEY = "yams-ui"; // { scale, uc }
+
+  /** Theme handling **/
+  const mql = window.matchMedia("(prefers-color-scheme: dark)");
+  function applyTheme(mode){
+    let theme = mode;
+    if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
+    document.documentElement.setAttribute("data-theme", theme);
+    document.querySelectorAll('input[name="themeMode"]').forEach(r=> r.checked = (r.value === mode));
+  }
+  function initTheme(){
+    let mode = localStorage.getItem(THEME_KEY) || "auto";
+    applyTheme(mode);
+    mql.addEventListener && mql.addEventListener("change", ()=>{
+      if ((localStorage.getItem(THEME_KEY) || "auto") === "auto"){ applyTheme("auto"); }
+    });
+  }
+  initTheme();
+
+  /** UI (zoom + ultra-compact) **/
+  function applyUI(ui){
+    if (!ui) return;
+    if (ui.scale){ document.documentElement.setAttribute("data-scale", String(ui.scale)); }
+    document.documentElement.setAttribute("data-uc", ui.uc ? "1" : "0");
+    const ucToggle = document.getElementById("ucToggle");
+    if (ucToggle) ucToggle.checked = !!ui.uc;
+  }
+  function loadUI(){ try { return JSON.parse(localStorage.getItem(UI_KEY) || "{}"); } catch(e){ return {}; } }
+  function saveUI(ui){ try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch(e){} }
+  let uiState = Object.assign({ scale: 1, uc: false }, loadUI());
+  applyUI(uiState);
+
+  // Settings modal behavior
+  const settingsBtn = document.getElementById("settingsBtn");
+  const backdrop = document.getElementById("backdrop");
+  const modal = document.getElementById("settingsModal");
+  const closeSettings = document.getElementById("closeSettings");
+
+  function openSettings(){ backdrop.classList.add("open"); modal.classList.add("open"); }
+  function closeSettingsModal(){ backdrop.classList.remove("open"); modal.classList.remove("open"); }
+  settingsBtn.addEventListener("click", openSettings);
+  closeSettings.addEventListener("click", closeSettingsModal);
+  backdrop.addEventListener("click", closeSettingsModal);
+  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeSettingsModal(); });
+
+  // Theme radio in modal
+  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
+    r.addEventListener("change", ()=>{
+      const mode = r.value;
+      try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
+      applyTheme(mode);
+    });
+  });
+  // Zoom buttons
+  document.querySelectorAll('[data-zoom]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.getAttribute('data-zoom');
+      uiState.scale = val;
+      applyUI(uiState);
+      saveUI(uiState);
+    });
+  });
+  // Ultra-compact toggle
+  document.getElementById("ucToggle").addEventListener('change', (e)=>{
+    uiState.uc = e.target.checked;
+    applyUI(uiState);
+    saveUI(uiState);
+  });
+
+  // Data model
+  let state = loadState() || { players: [] };
+  function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
+  function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
+  function canonicalName(name){ return (name || "").trim().toLowerCase(); }
+  function nameExists(name, exceptId=null){
+    const cn = canonicalName(name);
+    return state.players.some(p => canonicalName(p.name) === cn && p.id !== exceptId);
+  }
+
+  function newPlayer(name){
+    const scores = {}; ALL_CATS.forEach(c => scores[c.key] = "");
+    return { id: crypto.randomUUID(), name, scores };
+  }
+
+  function num(v){ const n = Number(v); return isFinite(n) ? n : 0; }
+  function sumUpper(scores){ return CATS_UPPER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
+  function sumLower(scores){ return CATS_LOWER.reduce((s,c)=> s + num(scores[c.key]||0), 0); }
+  function bonus(upper){ return upper >= 63 ? 35 : 0; }
+  function totals(scores){
+    const u = sumUpper(scores), b = bonus(u), l = sumLower(scores);
+    return { upper:u, bonus:b, lower:l, total:u + b + l };
+  }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
+  }
+
+  const thead = document.getElementById("thead");
+  const tbody = document.getElementById("tbody");
+
+  function buildTable(){
+    // Header
+    thead.innerHTML = "";
+    const trHead = document.createElement("tr");
+    const thCat = document.createElement("th");
+    thCat.className = "cat";
+    thCat.textContent = "Catégorie";
+    trHead.appendChild(thCat);
+
+    state.players.forEach(p => {
+      const th = document.createElement("th");
+      th.className = "player";
+      th.dataset.playerId = p.id;
+      th.innerHTML = `<div class="player-head">
+        <span class="name">${escapeHtml(p.name || "Sans nom")}</span>
+        <button data-action="rename" title="Renommer">✎</button>
+        <button data-action="delete" class="danger" title="Supprimer">✕</button>
+      </div>`;
+      // actions
+      th.querySelector('[data-action="rename"]').addEventListener('click', ()=>{
+        const current = p.name || "";
+        const newName = prompt("Nouveau nom du joueur :", current);
+        if (newName !== null){
+          const trimmed = newName.trim();
+          if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
+          if (nameExists(trimmed, p.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
+          p.name = trimmed;
+          th.querySelector(".name").textContent = p.name;
+          saveState(); renderLeaderboard();
+        }
+      });
+      th.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
+        if (confirm(`Supprimer ${p.name || "ce joueur"} ?`)){
+          state.players = state.players.filter(pl => pl.id !== p.id);
+          saveState(); buildTable(); renderLeaderboard();
+        }
+      });
+      trHead.appendChild(th);
+    });
+
+    thead.appendChild(trHead);
+
+    // Body rows
+    tbody.innerHTML = "";
+    function addRow(label, key, hint, max, className=""){
+      const tr = document.createElement("tr");
+      const tdCat = document.createElement("td");
+      tdCat.className = "cat " + className;
+      tdCat.innerHTML = `${label} ${hint?`<span class="muted">(${hint})</span>`:""}`;
+      tr.appendChild(tdCat);
+      state.players.forEach(p => {
+        const td = document.createElement("td"); td.className = "cell " + className;
+        if (key[0] !== "_"){
+          const input = document.createElement("input");
+          input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
+          if (max != null){ input.placeholder = `0…${max}`; input.title = `Score max: ${max}`; }
+          input.min = "0"; input.step = "1";
+          input.value = p.scores[key];
+          input.addEventListener("keydown", (e)=>{ if (e.key === "ArrowUp" || e.key === "ArrowDown"){ e.preventDefault(); } });
+          input.addEventListener("input", ()=>{
+            const raw = input.value.replace(/[^\d]/g, "");
+            const v = raw === "" ? "" : clampInt(raw, 0, max ?? 200);
+            if (String(v) != input.value){ input.value = v; }
+            p.scores[key] = raw === "" ? "" : v;
+            saveState();
+            refreshComputedForPlayer(p.id);
+            renderLeaderboard();
+          });
+          td.appendChild(input);
+        } else {
+          // computed cell
+          td.textContent = "";
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+
+    CATS_UPPER.forEach(cat => addRow(cat.label, cat.key, cat.hint, cat.max));
+    addRow("Sous-total (1→6)", "_upper", "", null, "subtotal");
+    addRow("Bonus (≥63)", "_bonus", "", null, "subtotal");
+    CATS_LOWER.forEach(cat => addRow(cat.label, cat.key, cat.hint, cat.max));
+    addRow("Total", "_total", "", null, "total");
+
+    // Initialize computed cells
+    state.players.forEach(p => refreshComputedForPlayer(p.id));
+  }
+
+  function clampInt(v, min, max){
+    let n = parseInt(v, 10);
+    if (!isFinite(n)) n = 0;
+    if (n < min) n = min;
+    if (n > max) n = max;
+    return n;
+  }
+
+  function refreshComputedForPlayer(playerId){
+    const p = state.players.find(x => x.id === playerId);
+    if (!p) return;
+    const t = totals(p.scores);
+
+    const colIdx = state.players.findIndex(x => x.id === playerId);
+    const rows = tbody.querySelectorAll("tr");
+    const upperCount = CATS_UPPER.length;
+    const subtotalRow = rows[upperCount];
+    const bonusRow = rows[upperCount + 1];
+    const totalRow = rows[upperCount + 1 + CATS_LOWER.length + 1];
+
+    function setCellText(tr, idx, text, cls){
+      const td = tr.children[idx + 1];
+      if (!td) return;
+      td.textContent = String(text);
+      td.className = "cell " + (cls || "");
+    }
+
+    setCellText(subtotalRow, colIdx, t.upper, "subtotal");
+    setCellText(bonusRow, colIdx, t.bonus, "subtotal");
+    setCellText(totalRow, colIdx, t.total, "total");
+  }
+
+  // Leaderboard
+  function renderLeaderboard(){
+    const cont = document.getElementById("rankingPills");
+    const hint = document.getElementById("leaderboardHint");
+    const data = state.players.map(p => ({ id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }))
+                              .sort((a,b)=> b.total - a.total);
+    cont.innerHTML = "";
+    data.forEach((r, i)=>{
+      const span = document.createElement("span");
+      span.className = "rank-pill";
+      span.textContent = `${i+1}. ${r.name} — ${r.total}`;
+      cont.appendChild(span);
+    });
+    hint.textContent = state.players.length ? "" : "Ajoutez au moins un joueur pour démarrer.";
+  }
+
+  // Add player / Reset
+  document.getElementById("addPlayerBtn").addEventListener('click', ()=>{
+    const nameInput = document.getElementById("playerName");
+    const name = (nameInput.value || "").trim();
+    if (!name){ alert("Entrez un nom de joueur."); nameInput.focus(); return; }
+    if (nameExists(name)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
+    const p = newPlayer(name);
+    state.players.push(p);
+    saveState(); buildTable(); renderLeaderboard();
+    nameInput.value = "";
+  });
+  document.getElementById("playerName").addEventListener('keydown', (e)=>{
+    if (e.key === "Enter") document.getElementById("addPlayerBtn").click();
+  });
+  document.getElementById("resetAllBtn").addEventListener('click', ()=>{
+    if (!state.players.length) return;
+    if (confirm("Effacer toutes les feuilles de score ?")){
+      state = { players: [] };
+      saveState(); buildTable(); renderLeaderboard();
+    }
+  });
+
+  // Settings: Export / Import / Clear cache
+  document.getElementById("exportBtn").addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "yams-scores.json";
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+  });
+  const importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener('click', ()=> importFile.click());
+  importFile.addEventListener('change', ()=>{
+    const file = importFile.files && importFile.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(String(reader.result));
+        if (!data || !Array.isArray(data.players)) throw new Error("Format invalide");
+        state = data; saveState();
+        buildTable(); renderLeaderboard();
+      }catch(err){ alert("Fichier invalide : " + err.message); }
+    };
+    reader.readAsText(file);
+  });
+  document.getElementById("clearCacheBtn").addEventListener('click', async ()=>{
+    if (!confirm("Vider le cache et redémarrer l’application ?")) return;
+    try{
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      if (navigator.serviceWorker){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+    }catch(e){ console.warn(e); }
+    location.reload();
+  });
+
+  // First paint
+  buildTable();
+  renderLeaderboard();
+
+  // PWA SW (versioned filename to force update)
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", ()=> navigator.serviceWorker.register("./sw-v6.js"));
+  }
+})();
+</script>
 </body>
 </html>
