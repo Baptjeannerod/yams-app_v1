@@ -1,1 +1,1 @@
-Déployez sur GitHub Pages. Le SW v3 force un chargement réseau pour la page HTML afin d'éviter le cache trop agressif.
+Déployez sur GitHub Pages. v4: réglages en haut à droite (⚙︎), modal centrée, exporter/importer dans Réglages.

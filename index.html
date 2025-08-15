@@ -30,10 +30,11 @@
   html, body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial; }
   header { position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(180%) blur(6px);
     padding: max(12px, env(safe-area-inset-top)) 16px 12px 16px; background: color-mix(in oklab, var(--panel) 85%, transparent); border-bottom:1px solid var(--border);
-    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
+    display:flex; align-items:center; gap:12px;
   }
   h1{ font-size: clamp(20px, 2.6vw, 28px); margin:0; line-height:1.2; }
   .sub{ color:var(--muted); font-size: 1rem; }
+  .spacer{ flex:1; }
   main{ padding: 16px; display:grid; gap:16px; }
   .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
   button, input{
@@ -63,15 +64,35 @@
   .danger{ border-color: var(--danger); color: var(--danger-text); }
   .notice{ border-color: var(--notice); color: var(--notice-text); }
   .footer { color: var(--muted); font-size:16px; text-align:center; padding:12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-  .menu { position: relative; }
-  .menu-panel{
-    position: absolute; right:0; top: calc(100% + 8px); background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; min-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 30;
+
+  /* Settings button (top-right) */
+  .settings-btn{
+    margin-left:auto;
+    width:44px; height:44px; display:grid; place-items:center; border-radius:12px;
+  }
+
+  /* Modal settings */
+  .backdrop{
+    position: fixed; inset: 0; background: rgba(0,0,0,.35);
+    display:none; z-index: 90;
+  }
+  .backdrop.open{ display:block; }
+  .modal{
+    position: fixed; z-index: 100;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(520px, calc(100vw - 32px));
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 16px; padding: 16px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.25);
     display:none;
   }
-  .menu-panel.open { display:block; }
-  .menu-panel h3{ margin: 0 0 8px 0; font-size: 1rem; }
-  .radio-row{ display:flex; align-items:center; gap:10px; padding:6px 0; }
-  .kbd-closer{ font-size: 15px; }
+  .modal.open{ display:block; }
+  .modal h3{ margin: 0 0 12px 0; font-size: 1.1rem; }
+  .radio-row{ display:flex; align-items:center; gap:10px; padding:8px 0; }
+  .modal .actions{ display:flex; gap:10px; flex-wrap: wrap; margin-top: 12px; }
+  .modal .close-line{ display:flex; justify-content:flex-end; }
+  .ghost-btn{ background: transparent; }
+  .hidden-input{ display:none; }
 </style>
 </head>
 <body>
@@ -80,26 +101,17 @@
       <h1>Yam’s — Scores & Classement</h1>
       <div class="sub">Saisie fluide, limites par catégorie, PWA iPad-friendly.</div>
     </div>
-    <div class="toolbar">
-      <div class="menu">
-        <button id="settingsBtn">Réglages ⚙️</button>
-        <div class="menu-panel" id="settingsPanel" role="dialog" aria-modal="true">
-          <h3>Thème</h3>
-          <div class="radio-row"><input type="radio" name="themeMode" id="themeAuto" value="auto"><label for="themeAuto">Auto (suivre l’appareil)</label></div>
-          <div class="radio-row"><input type="radio" name="themeMode" id="themeLight" value="light"><label for="themeLight">Clair</label></div>
-          <div class="radio-row"><input type="radio" name="themeMode" id="themeDark" value="dark"><label for="themeDark">Sombre</label></div>
-        </div>
-      </div>
-      <input id="playerName" placeholder="Nom du joueur" />
-      <button id="addPlayerBtn">Ajouter</button>
-      <button id="closeKbBtn" class="kbd-closer" title="Fermer le clavier">Fermer le clavier</button>
-      <button id="resetAllBtn">Tout réinitialiser</button>
-      <button id="exportBtn">Exporter</button>
-      <button id="importBtn">Importer</button>
-    </div>
+    <div class="spacer"></div>
+    <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
   </header>
 
   <main>
+    <div class="toolbar">
+      <input id="playerName" placeholder="Nom du joueur" />
+      <button id="addPlayerBtn">Ajouter</button>
+      <button id="resetAllBtn">Tout réinitialiser</button>
+    </div>
+
     <section class="leaderboard" id="leaderboard">
       <h2>Classement</h2>
       <div id="rankingRows"></div>
@@ -109,6 +121,24 @@
   </main>
 
   <div class="footer">Bonus +35 si (1→6) ≥ 63. Limites: 1×6, 2×12, 3×18, 4×24, 5×30, 6×36, Brelan/Carré/Chance 30, Full 25, Petite 30, Grande 40, Yam’s 50.</div>
+
+  <!-- Settings Modal -->
+  <div id="backdrop" class="backdrop"></div>
+  <div id="settingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="close-line"><button id="closeSettings" class="ghost-btn" aria-label="Fermer">✕</button></div>
+    <h3 id="settingsTitle">Réglages</h3>
+    <div>
+      <strong>Thème</strong>
+      <div class="radio-row"><input type="radio" name="themeMode" id="themeAuto" value="auto"><label for="themeAuto">Auto (suivre l’appareil)</label></div>
+      <div class="radio-row"><input type="radio" name="themeMode" id="themeLight" value="light"><label for="themeLight">Clair</label></div>
+      <div class="radio-row"><input type="radio" name="themeMode" id="themeDark" value="dark"><label for="themeDark">Sombre</label></div>
+    </div>
+    <div class="actions">
+      <button id="exportBtn">Exporter</button>
+      <button id="importBtn">Importer</button>
+      <input id="importFile" class="hidden-input" type="file" accept="application/json" />
+    </div>
+  </div>
 
 <script>
 (function(){
@@ -130,7 +160,7 @@
     {key:'chance',    label:'Chance',        hint:'Somme des dés', max:30},
   ];
   const ALL_CATS = [...CATS_UPPER, ...CATS_LOWER];
-  const STORAGE_KEY = "yams-app-pages-v3";
+  const STORAGE_KEY = "yams-app-pages-v4";
   const THEME_KEY = "yams-theme-mode"; // 'auto' | 'light' | 'dark'
 
   /** Theme handling **/
@@ -150,21 +180,6 @@
     });
   }
   initTheme();
-
-  // Settings menu
-  const settingsBtn = document.getElementById("settingsBtn");
-  const settingsPanel = document.getElementById("settingsPanel");
-  settingsBtn.addEventListener("click", ()=> settingsPanel.classList.toggle("open"));
-  document.addEventListener("click", (e)=>{
-    if (!settingsPanel.contains(e.target) && e.target !== settingsBtn){ settingsPanel.classList.remove("open"); }
-  });
-  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
-    r.addEventListener("change", ()=>{
-      const mode = r.value;
-      try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
-      applyTheme(mode);
-    });
-  });
 
   // State
   let state = loadState() || { players: [] };
@@ -302,7 +317,7 @@
       state.players.length ? "Classement mis à jour à chaque saisie." : "Ajoutez au moins un joueur pour démarrer.";
   }
 
-  // Toolbar
+  // Toolbar actions
   document.getElementById("addPlayerBtn").addEventListener('click', ()=>{
     const nameInput = document.getElementById("playerName");
     const name = (nameInput.value || "").trim();
@@ -316,13 +331,6 @@
     nameInput.value = "";
   });
 
-  function blurActive(){ if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
-  document.getElementById("closeKbBtn").addEventListener("click", blurActive);
-  document.addEventListener("touchstart", (e)=>{
-    const insideInput = e.target.closest("input, button, .menu-panel");
-    if (!insideInput){ blurActive(); }
-  }, {passive:true});
-
   document.getElementById("playerName").addEventListener('keydown', (e)=>{
     if (e.key === "Enter") document.getElementById("addPlayerBtn").click();
   });
@@ -335,6 +343,36 @@
       renderLeaderboard();
     }
   });
+
+  // Settings modal behavior
+  const settingsBtn = document.getElementById("settingsBtn");
+  const backdrop = document.getElementById("backdrop");
+  const modal = document.getElementById("settingsModal");
+  const closeSettings = document.getElementById("closeSettings");
+
+  function openSettings(){
+    backdrop.classList.add("open");
+    modal.classList.add("open");
+  }
+  function closeSettingsModal(){
+    backdrop.classList.remove("open");
+    modal.classList.remove("open");
+  }
+  settingsBtn.addEventListener("click", openSettings);
+  closeSettings.addEventListener("click", closeSettingsModal);
+  backdrop.addEventListener("click", closeSettingsModal);
+  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeSettingsModal(); });
+
+  // Theme radio in modal
+  document.querySelectorAll('input[name="themeMode"]').forEach(r=>{
+    r.addEventListener("change", ()=>{
+      const mode = r.value;
+      try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
+      applyTheme(mode);
+    });
+  });
+
+  // Export / Import (now in modal)
   document.getElementById("exportBtn").addEventListener('click', ()=>{
     const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
@@ -342,22 +380,20 @@
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
   });
-  document.getElementById("importBtn").addEventListener('click', ()=>{
-    const input = document.createElement("input"); input.type = "file"; input.accept = "application/json";
-    input.addEventListener('change', ()=>{
-      const file = input.files && input.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        try{
-          const data = JSON.parse(String(reader.result));
-          if (!data || !Array.isArray(data.players)) throw new Error("Format invalide");
-          state = data; saveState();
-          renderAllPlayers(); renderLeaderboard();
-        }catch(err){ alert("Fichier invalide : " + err.message); }
-      };
-      reader.readAsText(file);
-    });
-    input.click();
+  const importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener('click', ()=> importFile.click());
+  importFile.addEventListener('change', ()=>{
+    const file = importFile.files && importFile.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(String(reader.result));
+        if (!data || !Array.isArray(data.players)) throw new Error("Format invalide");
+        state = data; saveState();
+        renderAllPlayers(); renderLeaderboard();
+      }catch(err){ alert("Fichier invalide : " + err.message); }
+    };
+    reader.readAsText(file);
   });
 
   // First paint

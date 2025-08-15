@@ -1,20 +1,11 @@
 const CACHE_STATIC = "yams-static-v3";
 const CACHE_HTML = "yams-html-v3";
-const STATIC_ASSETS = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest?v=3",
-  "./icon-192.png",
-  "./icon-512.png"
-];
+const STATIC_ASSETS = ["./","./index.html","./manifest.webmanifest?v=3","./icon-192.png","./icon-512.png"];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_STATIC).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE_STATIC).then(cache => cache.addAll(STATIC_ASSETS)));
 });
-
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
@@ -24,12 +15,9 @@ self.addEventListener("activate", (event) => {
     await self.clients.claim();
   })());
 });
-
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const accept = req.headers.get("accept") || "";
-
-  // Network-first for HTML navigations to always get latest
   if (req.mode === "navigate" || accept.includes("text/html")) {
     event.respondWith((async () => {
       try {
@@ -41,14 +29,11 @@ self.addEventListener("fetch", (event) => {
         const cache = await caches.open(CACHE_HTML);
         const cached = await cache.match(req);
         if (cached) return cached;
-        // fallback to root if offline
         return caches.match("./index.html");
       }
     })());
     return;
   }
-
-  // Stale-while-revalidate for other requests (icons, manifest)
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_STATIC);
     const cached = await cache.match(req);
