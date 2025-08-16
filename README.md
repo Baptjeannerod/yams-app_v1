@@ -1,1 +1,1 @@
-Version v7.4.4 SAFE: classement unifié, colonnes Catégorie/Total fixées, UI allégée, version en réglages, presets renommés, bouton unique Clôturer (relance auto), sauvegarde détaillée des manches, PDF avec détail par manche, SW 12.4.
+Version v7.4.5 SAFE: fix des inputs (text+numeric), classement unifié, colonnes Catégorie/Total fixées, UI allégée, version en réglages, presets renommés, bouton unique Clôturer (relance auto), sauvegarde détaillée des manches, PDF détaillé, SW 12.5.

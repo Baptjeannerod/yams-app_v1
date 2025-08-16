@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<link rel="manifest" href="manifest.webmanifest?v=12.4">
+<link rel="manifest" href="manifest.webmanifest?v=12.5">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Feuille de score & Classement</title>
 <style>
@@ -19,7 +19,6 @@
     --danger: rgba(239,68,68,.2); --danger-border: rgba(239,68,68,.45);
     --success: rgba(34,197,94,.2); --success-border: rgba(34,197,94,.45);
     --sticky: color-mix(in oklab, var(--panel) 92%, transparent);
-    --hl: rgba(250,204,21,.18); --hl-border: rgba(250,204,21,.5);
   }
   html[data-theme="dark"]{
     --bg:#0f172a; --panel:#0b1220; --text:#e2e8f0; --muted:#94a3b8;
@@ -29,7 +28,6 @@
     --danger: rgba(239,68,68,.22); --danger-border: rgba(239,68,68,.55);
     --success: rgba(34,197,94,.22); --success-border: rgba(34,197,94,.55);
     --sticky: color-mix(in oklab, var(--panel) 96%, transparent);
-    --hl: rgba(250,204,21,.12); --hl-border: rgba(250,204,21,.45);
   }
   html { font-size: calc(16px * var(--scale, 1)); }
   html[data-scale="0.9"]{ --scale: .9; }
@@ -59,12 +57,10 @@
   }
   html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select { background:#111827; }
 
-  /* Classement unifié */
   .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px; display:grid; gap:10px; }
   .lb-head { display:flex; align-items:center; gap:10px; }
   .lb-list span{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; display:inline-block; margin:2px 6px 2px 0; }
 
-  /* Grille de saisie */
   .table-wrap{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); overflow: auto; }
   table { width:100%; border-collapse: separate; border-spacing: 0; min-width: 900px; }
   thead th{ position: sticky; top:0; z-index: 5; background: var(--sticky); border-bottom: 1px solid var(--border); text-align: center; }
@@ -77,11 +73,10 @@
   .player-head .name{ font-weight:700; text-align:center; }
   .player-head button{ min-height:30px; padding:6px 8px; font-size:.9rem; }
   .cell{ text-align: center; }
-  .cell input[type="number"]{ width: var(--input-w); text-align:center; min-height:34px; margin: 0 auto; display:block; }
+  .cell input{ width: var(--input-w); text-align:center; min-height:34px; margin: 0 auto; display:block; }
   .cell input.is-empty{ background: var(--danger); border-color: var(--danger-border); }
   .cell input.is-filled{ background: var(--success); border-color: var(--success-border); }
 
-  /* Sticky col: Catégorie (gauche) et Total (droite) */
   th.first-col, td.first-col{ position: sticky; left: 0; z-index: 4; background: var(--sticky); }
   th.total-col, td.total-col{ position: sticky; right: 0; z-index: 4; background: var(--sticky); }
   tr.last-row td{ position: sticky; bottom: 0; background: var(--sticky); z-index: 3; }
@@ -106,16 +101,7 @@
   .danger-btn{ border-color: var(--danger-border); color: #7f1d1d; }
   .muted { color: var(--muted); }
 
-  /* Stats */
-  .stats-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  .card{ border:1px solid var(--border); border-radius:12px; padding:12px; background: var(--panel); }
-  .card h4{ margin:0 0 8px 0; }
-  .mini{ font-size:.95rem; }
-  .kv{ display:grid; grid-template-columns: auto 1fr; gap:6px 10px; align-items:center; }
-  .kv b{ text-align:right; }
-  .chart{ width:100%; height:180px; }
-
-  /* Impression (PDF) */
+  /* Print */
   #printView{ display:none; }
   @media print{
     @page{ size: A4 landscape; margin: 12mm; }
@@ -150,9 +136,7 @@
   </div>
 
   <header>
-    <div>
-      <h1>Yam’s — Feuille de score & Classement</h1>
-    </div>
+    <div><h1>Yam’s — Feuille de score & Classement</h1></div>
     <div class="spacer"></div>
     <button id="settingsBtn" class="settings-btn" title="Réglages">⚙︎</button>
   </header>
@@ -165,7 +149,6 @@
       <button id="openHistoryBtn">Historique</button>
     </div>
 
-    <!-- CLASSEMENT (unifié) -->
     <section class="leaderboard" id="leaderboard">
       <div class="lb-head">
         <strong>Classement</strong>
@@ -178,7 +161,6 @@
       <div class="lb-list" id="lbList"></div>
     </section>
 
-    <!-- TABLEAU DE SAISIE -->
     <div class="table-wrap">
       <table id="scoreTable">
         <thead id="thead"></thead>
@@ -187,29 +169,23 @@
     </div>
   </main>
 
-  <!-- Impression / PDF -->
   <div id="printView">
     <h1>Yam’s — Rapport des scores</h1>
     <h2>1) Classement</h2>
     <div id="printLeaderboards"></div>
-
     <h2>2) Totaux par partie</h2>
     <div id="printRounds"></div>
-
     <h2>3) Détail par manche (catégories × joueurs)</h2>
     <div id="printRoundDetails"></div>
-
     <h2>4) Fiches joueurs</h2>
     <div id="printPlayers"></div>
   </div>
 
-  <!-- Modales -->
   <div id="backdrop" class="backdrop"></div>
 
   <div id="settingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <div class="close-line"><button id="closeSettings" class="ghost-btn" aria-label="Fermer">✕</button></div>
     <h3 id="settingsTitle">Réglages</h3>
-
     <div class="section">
       <h4>Mode</h4>
       <div class="radio-row">
@@ -218,7 +194,6 @@
         <label><input type="radio" name="themeMode" value="dark"> Sombre</label>
       </div>
     </div>
-
     <div class="section">
       <h4>Affichage</h4>
       <div class="row">
@@ -230,7 +205,6 @@
         </select>
       </div>
     </div>
-
     <div class="section">
       <h4>Données</h4>
       <div class="actions">
@@ -241,19 +215,14 @@
         <input id="importFile" class="hidden-input" type="file" accept="application/json" />
       </div>
     </div>
-
-    <div class="section">
-      <div class="muted">Version : v7.4.4</div>
-    </div>
+    <div class="section"><div class="muted">Version : v7.4.5</div></div>
   </div>
 
   <div id="historyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
     <div class="close-line"><button id="closeHistory" class="ghost-btn" aria-label="Fermer">✕</button></div>
     <h3 id="historyTitle">Historique des manches</h3>
     <div id="historyList" class="history-list"></div>
-    <div class="actions" style="margin-top:8px;">
-      <button id="clearHistoryBtn" class="danger-btn">Effacer l’historique</button>
-    </div>
+    <div class="actions" style="margin-top:8px;"><button id="clearHistoryBtn" class="danger-btn">Effacer l’historique</button></div>
   </div>
 
   <div id="playerStatsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="playerStatsTitle">
@@ -263,7 +232,7 @@
   </div>
 
 <script>
-// --- Error overlay bootstrap (SAFE MODE) ---
+// SAFE MODE overlay
 (function(){
   var overlay = document.getElementById('errOverlay');
   var txt = document.getElementById('errText');
@@ -290,7 +259,6 @@
 
 <script>
 (function(){
-  // --- Constantes catégories ---
   var CATS_UPPER = [
     {key:'ones',   label:'1 ×', hint:'Somme des 1', max:5},
     {key:'twos',   label:'2 ×', hint:'Somme des 2', max:10},
@@ -310,14 +278,12 @@
   ];
   var ALL_CATS = CATS_UPPER.concat(CATS_LOWER);
 
-  // --- Clés de stockage ---
   var STORAGE_KEY = "yams-app-pages-v6.1-table";
-  var ROUNDS_KEY = "yams-rounds-v7"; // ancienne structure
-  var ROUNDS2_KEY = "yams-rounds-v7-details"; // nouvelle structure avec détails catégories
+  var ROUNDS2_KEY = "yams-rounds-v7-details";
   var THEME_KEY = "yams-theme-mode";
   var UI_KEY = "yams-ui-v7";
 
-  // --- Thème & UI ---
+  // Theme
   var mql = window.matchMedia("(prefers-color-scheme: dark)");
   function applyTheme(mode){
     var theme = mode; if (mode === "auto"){ theme = mql.matches ? "dark" : "light"; }
@@ -325,16 +291,12 @@
     var radios = document.querySelectorAll('input[name="themeMode"]');
     for (var i=0;i<radios.length;i++) radios[i].checked = (radios[i].value === mode);
   }
-  function initTheme(){
-    var mode = localStorage.getItem(THEME_KEY) || "auto";
-    applyTheme(mode);
-    if (mql.addEventListener) mql.addEventListener("change", function(){
-      if ((localStorage.getItem(THEME_KEY) || "auto") === "auto"){ applyTheme("auto"); }
-    });
-  }
-  initTheme();
+  (function initTheme(){
+    var mode = localStorage.getItem(THEME_KEY) || "auto"; applyTheme(mode);
+    if (mql.addEventListener) mql.addEventListener("change", function(){ if ((localStorage.getItem(THEME_KEY) || "auto") === "auto"){ applyTheme("auto"); } });
+  })();
 
-  // Préréglages d'affichage
+  // UI presets
   function applyUIPreset(preset){
     var conf = { scale:1, dense:0, colMin:150 };
     if (preset === "serre") conf = { scale:0.95, dense:1, colMin:140 };
@@ -362,25 +324,16 @@
     }
   })();
 
-  // --- État ---
+  // State
   function loadState(){ try{ var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
   var state = loadState() || { players: [] };
 
-  function loadRounds(){ try{ return JSON.parse(localStorage.getItem(ROUNDS_KEY) || "[]"); } catch(e){ return []; } }
-  function saveRounds(){ try{ localStorage.setItem(ROUNDS_KEY, JSON.stringify(roundsOld)); } catch(e){} }
-  var roundsOld = loadRounds();
-
   function loadRounds2(){ try{ return JSON.parse(localStorage.getItem(ROUNDS2_KEY) || "[]"); } catch(e){ return []; } }
   function saveRounds2(){ try{ localStorage.setItem(ROUNDS2_KEY, JSON.stringify(rounds)); } catch(e){} }
-  // Migration si besoin
   var rounds = loadRounds2();
-  if (!rounds.length && roundsOld.length) {
-    rounds = roundsOld.map(function(r){ return { time:r.time, totals:r.totals, scores:{} }; });
-    saveRounds2();
-  }
 
-  // --- Utilitaires ---
+  // Utils
   function canonicalName(name){ return (name || "").trim().toLowerCase(); }
   function nameExists(name, exceptId){ var cn = canonicalName(name); return state.players.some(function(p){ return canonicalName(p.name) === cn && p.id !== exceptId; }); }
   function newPlayer(name){ var scores = {}; for (var i=0;i<ALL_CATS.length;i++) scores[ALL_CATS[i].key] = ""; return { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()), name: name, scores: scores }; }
@@ -392,7 +345,7 @@
   function escapeHtml(str){ return String(str).replace(/[&<>\"']/g, function(s){ return {"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[s]; }); }
   function countFilled(scores){ var c=0; for (var k in scores) if (scores[k]!=="" && scores[k]!=null) c++; return c; }
 
-  // --- Table de saisie ---
+  // Build table
   var thead = document.getElementById("thead");
   var tbody = document.getElementById("tbody");
 
@@ -401,95 +354,101 @@
     var trHead = document.createElement("tr");
     var thCat = document.createElement("th"); thCat.className = "cat first-col"; thCat.textContent = "Catégorie"; trHead.appendChild(thCat);
 
-    // Colonnes joueurs
-    for (var i=0;i<state.players.length;i++) {
-      (function(p){
-        var th = document.createElement("th");
-        th.className = "player"; th.dataset.playerId = p.id;
-        th.innerHTML = '<div class="player-head">\
-          <span class="name">'+escapeHtml(p.name || "Sans nom")+'</span>\
-          <button data-action="stats" title="Statistiques">📈</button>\
-          <button data-action="rename" title="Renommer">✎</button>\
-          <button data-action="delete" class="danger" title="Supprimer">✕</button>\
-        </div>';
-        th.querySelector('[data-action="stats"]').addEventListener('click', function(){ openPlayerStats(p.id); });
-        th.querySelector('[data-action="rename"]').addEventListener('click', function(){
-          var current = p.name || "";
-          var newName = prompt("Nouveau nom du joueur :", current);
-          if (newName !== null){
-            var trimmed = newName.trim();
-            if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
-            if (nameExists(trimmed, p.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
-            p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboard();
-          }
-        });
-        th.querySelector('[data-action="delete"]').addEventListener('click', function(){
-          if (confirm("Supprimer "+(p.name || "ce joueur")+" ?")){
-            state.players = state.players.filter(function(pl){ return pl.id !== p.id; }); saveState(); buildTable(); renderLeaderboard();
-          }
-        });
-        trHead.appendChild(th);
-      })(state.players[i]);
-    }
+    state.players.forEach(function(p){
+      var th = document.createElement("th");
+      th.className = "player"; th.dataset.playerId = p.id;
+      th.innerHTML = '<div class="player-head">\
+        <span class="name">'+escapeHtml(p.name || "Sans nom")+'</span>\
+        <button data-action="stats" title="Statistiques">📈</button>\
+        <button data-action="rename" title="Renommer">✎</button>\
+        <button data-action="delete" class="danger" title="Supprimer">✕</button>\
+      </div>';
+      th.querySelector('[data-action="stats"]').addEventListener('click', function(){ openPlayerStats(p.id); });
+      th.querySelector('[data-action="rename"]').addEventListener('click', function(){
+        var current = p.name || "";
+        var newName = prompt("Nouveau nom du joueur :", current);
+        if (newName !== null){
+          var trimmed = newName.trim();
+          if (!trimmed){ alert("Le nom ne peut pas être vide."); return; }
+          if (nameExists(trimmed, p.id)){ alert("Ce prénom existe déjà. Choisissez un autre nom."); return; }
+          p.name = trimmed; th.querySelector(".name").textContent = p.name; saveState(); renderLeaderboard();
+        }
+      });
+      th.querySelector('[data-action="delete"]').addEventListener('click', function(){
+        if (confirm("Supprimer "+(p.name || "ce joueur")+" ?")){
+          state.players = state.players.filter(function(pl){ return pl.id !== p.id; }); saveState(); buildTable(); renderLeaderboard();
+        }
+      });
+      trHead.appendChild(th);
+    });
 
-    // Colonne Total (droite, sticky)
     var thTotal = document.createElement("th"); thTotal.className = "total-col"; thTotal.textContent = "Total"; trHead.appendChild(thTotal);
     thead.appendChild(trHead);
 
-    // Corps
     tbody.innerHTML = "";
     function addRow(label, key, hint, max, className, isLast){
       var tr = document.createElement("tr"); if (isLast) tr.classList.add("last-row");
       var tdCat = document.createElement("td"); tdCat.className = "cat first-col "+(className||""); tdCat.innerHTML = label + (hint? ' <span class="muted">('+hint+')</span>' : ''); tr.appendChild(tdCat);
 
-      for (var i=0;i<state.players.length;i++){ (function(p){
+      state.players.forEach(function(p){
         var td = document.createElement("td"); td.className = "cell "+(className||"");
         if (key.charAt(0) !== "_"){
           var input = document.createElement("input");
-          input.type = "number"; input.inputMode = "numeric"; input.pattern = "[0-9]*";
-          if (max != null){ input.placeholder = "0…"+max; input.title = "Score max : "+max; }
-          input.min = "0"; input.step = "1"; input.value = p.scores[key];
+          input.type = "text"; // robust across iOS/macOS
+          input.setAttribute("inputmode","numeric");
+          input.setAttribute("pattern","[0-9]*");
+          input.autocomplete = "off";
+          input.placeholder = (max!=null)?("0…"+max):"0";
+          input.value = String(p.scores[key] ?? "");
           applyFillClass(input);
-          input.addEventListener("keydown", function(e){ if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault(); });
           input.addEventListener("input", function(){
-            var raw = String(input.value).replace(/[^\\d]/g, ""); var v = raw === "" ? "" : clampInt(raw, 0, (max!=null?max:200));
-            if (String(v) !== input.value) input.value = v;
-            p.scores[key] = (raw === "") ? "" : v; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboard();
+            var digits = String(input.value).replace(/[^\d]/g,"");
+            if (digits !== input.value){ input.value = digits; }
+            if (digits === ""){
+              p.scores[key] = ""; applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboard(); return;
+            }
+            var n = parseInt(digits,10);
+            if (isFinite(n)){
+              if (max!=null && n>max) n = max;
+              input.value = String(n);
+              p.scores[key] = n;
+            } else {
+              p.scores[key] = "";
+            }
+            applyFillClass(input); saveState(); refreshComputedForPlayer(p.id); renderLeaderboard();
           });
           td.appendChild(input);
         } else { td.textContent = ""; }
         tr.appendChild(td);
-      })(state.players[i]); }
+      });
 
-      // Cellule "Total" sticky (droite) — vide sauf pour la ligne Total
       var tdTot = document.createElement("td"); tdTot.className = "total-col "+(className||""); tdTot.textContent = "";
       tr.appendChild(tdTot);
 
       tbody.appendChild(tr);
     }
 
-    for (var i=0;i<CATS_UPPER.length;i++) addRow(CATS_UPPER[i].label, CATS_UPPER[i].key, CATS_UPPER[i].hint, CATS_UPPER[i].max);
+    CATS_UPPER.forEach(function(cat){ addRow(cat.label, cat.key, cat.hint, cat.max); });
     addRow("Sous-total (1→6)", "_upper", "", null, "subtotal");
     addRow("Bonus (≥63)", "_bonus", "", null, "subtotal");
-    for (var j=0;j<CATS_LOWER.length;j++) addRow(CATS_LOWER[j].label, CATS_LOWER[j].key, CATS_LOWER[j].hint, CATS_LOWER[j].max);
+    CATS_LOWER.forEach(function(cat){ addRow(cat.label, cat.key, cat.hint, cat.max); });
     addRow("Total", "_total", "", null, "total-row", true);
 
-    for (var k=0;k<state.players.length;k++) refreshComputedForPlayer(state.players[k].id);
+    state.players.forEach(function(p){ refreshComputedForPlayer(p.id); });
   }
 
   function applyFillClass(input){ if (String(input.value).trim() === ""){ input.classList.add("is-empty"); input.classList.remove("is-filled"); } else { input.classList.remove("is-empty"); input.classList.add("is-filled"); } }
-  function clampInt(v, min, max){ var n = parseInt(v, 10); if (!isFinite(n)) n = 0; if (n < min) n = min; if (n > max) n = max; return n; }
   function totalsForPlayer(p){ return totals(p.scores).total; }
 
   function refreshComputedForPlayer(playerId){
-    var p = null; for (var i=0;i<state.players.length;i++) if (state.players[i].id===playerId) { p = state.players[i]; break; } if (!p) return;
+    var p = state.players.find(function(x){ return x.id===playerId; }); if (!p) return;
     var t = totals(p.scores);
-    var colIdx = -1; for (var j=0;j<state.players.length;j++) if (state.players[j].id===playerId) { colIdx = j; break; }
+    var colIdx = state.players.findIndex(function(x){ return x.id===playerId; });
     var rows = tbody.querySelectorAll("tr");
-    var upperCount = CATS_UPPER.length;
+    var upperCount = 6;
     var subtotalRow = rows[upperCount];
     var bonusRow = rows[upperCount + 1];
-    var totalRow = rows[upperCount + 1 + CATS_LOWER.length + 1];
+    var totalRow = rows[upperCount + 1 + 7 + 1];
     function setCellText(tr, idx, text, cls){
       var td = tr.children[idx + 1]; if (!td) return; td.textContent = String(text); td.className = "cell " + (cls || "");
     }
@@ -498,7 +457,7 @@
     setCellText(totalRow, colIdx, t.total, "total-row");
   }
 
-  // --- Classement unifié ---
+  // Leaderboard
   var lbList = document.getElementById("lbList");
   var lbView = document.getElementById("lbView");
   lbView.addEventListener("change", renderLeaderboard);
@@ -508,27 +467,27 @@
     lbList.innerHTML = "";
     if (view === "current"){
       var cur = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
-      for (var i=0;i<cur.length;i++){ var s=document.createElement("span"); s.textContent=(i+1)+". "+cur[i].name+" — "+cur[i].total; lbList.appendChild(s); }
+      cur.forEach(function(r,i){ var s=document.createElement("span"); s.textContent=(i+1)+". "+r.name+" — "+r.total; lbList.appendChild(s); });
     } else if (view === "avg"){
       var arr = state.players.map(function(p){ var st = getStatsAllRoundsForPlayer(p.id); return { id:p.id, name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
-      for (var j=0;j<arr.length;j++){ var s2=document.createElement("span"); s2.textContent=(j+1)+". "+arr[j].name+" — moy "+arr[j].avg+" (max "+arr[j].best+")"; lbList.appendChild(s2); }
+      arr.forEach(function(r,i){ var s2=document.createElement("span"); s2.textContent=(i+1)+". "+r.name+" — moy "+r.avg+" (max "+r.best+")"; lbList.appendChild(s2); });
     } else if (view === "wins"){
       var wmap = winsTable();
       var wr = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
-      for (var k=0;k<wr.length;k++){ var s3=document.createElement("span"); s3.textContent=(k+1)+". "+wr[k].name+" — "+wr[k].w+" vic."; lbList.appendChild(s3); }
+      wr.forEach(function(r,i){ var s3=document.createElement("span"); s3.textContent=(i+1)+". "+r.name+" — "+r.w+" vic."; lbList.appendChild(s3); });
     }
   }
-
   function winsTable(){
-    var wins = {}; for (var i=0;i<state.players.length;i++) wins[state.players[i].id]=0;
-    for (var r=0;r<rounds.length;r++){ var best=-Infinity, bestId=null;
-      for (var pid in rounds[r].totals){ var v=Number(rounds[r].totals[pid])||0; if (v>best){ best=v; bestId=pid; } }
+    var wins = {}; state.players.forEach(function(p){ wins[p.id]=0; });
+    rounds.forEach(function(r){
+      var best=-Infinity, bestId=null;
+      for (var pid in r.totals){ var v=Number(r.totals[pid])||0; if (v>best){ best=v; bestId=pid; } }
       if (bestId && wins[bestId]!=null) wins[bestId]++;
-    }
+    });
     return wins;
   }
 
-  // --- Historique ---
+  // History
   var historyModal = document.getElementById("historyModal");
   var historyList = document.getElementById("historyList");
   document.getElementById("openHistoryBtn").addEventListener('click', function(){ renderHistory(); backdrop.classList.add("open"); historyModal.classList.add("open"); });
@@ -540,64 +499,63 @@
   function renderHistory(){
     historyList.innerHTML = "";
     if (!rounds.length){ historyList.innerHTML = "<div class='muted' style='padding:8px'>Aucune manche enregistrée.</div>"; return; }
-    for (var i=rounds.length-1, n=1; i>=0; i--, n++){ var r = rounds[i];
+    for (var i=rounds.length-1; i>=0; i--){
+      var r = rounds[i];
       var div = document.createElement("div"); div.className = "history-item";
       var date = new Date(r.time).toLocaleString();
-      var arr = Object.keys(r.totals).map(function(id){ 
-        var name = "Joueur"; for (var z=0;z<state.players.length;z++) if (state.players[z].id===id) { name = state.players[z].name || "Joueur"; break; }
+      var arr = Object.keys(r.totals).map(function(id){
+        var name = "Joueur"; var found = state.players.find(function(p){ return p.id===id; }); if (found) name = found.name || "Joueur";
         return {id:id, name:name, t:Number(r.totals[id])||0};
       }).sort(function(a,b){ return b.t-a.t; }).slice(0,3);
       var summary = arr.map(function(x, idx){ return (idx+1)+". "+x.name+" "+x.t; }).join(" • ");
-      div.innerHTML = "<div><strong>Partie "+(rounds.length - i)+"</strong> — "+date+"<br><span class='muted'>"+summary+"</span></div>";
+      div.innerHTML = "<div><strong>Partie "+(i+1)+"</strong> — "+date+"<br><span class='muted'>"+summary+"</span></div>";
       historyList.appendChild(div);
     }
   }
 
-  // --- Bouton unique Clôturer la manche ---
+  // Round button
   var roundToggleBtn = document.getElementById("roundToggleBtn");
   roundToggleBtn.addEventListener('click', function(){
     if (!state.players.length){ alert("Aucun joueur."); return; }
-    // Snapshot des scores détaillés + totaux
     var totalsMap = {}; var scoresMap = {};
-    for (var i=0;i<state.players.length;i++){ var p = state.players[i]; totalsMap[p.id] = totals(p.scores).total; scoresMap[p.id] = Object.assign({}, p.scores); }
+    state.players.forEach(function(p){ totalsMap[p.id] = totals(p.scores).total; scoresMap[p.id] = Object.assign({}, p.scores); });
     rounds.push({ time: new Date().toISOString(), totals: totalsMap, scores: scoresMap });
     saveRounds2();
     alert("Manche clôturée et enregistrée ! Nouvelle manche lancée.");
-    // Réinitialise les cases pour la nouvelle manche
-    for (var j=0;j<state.players.length;j++){ var q = state.players[j]; for (var k in q.scores) q.scores[k] = ""; }
+    state.players.forEach(function(q){ for (var k in q.scores) q.scores[k] = ""; });
     saveState(); buildTable(); renderLeaderboard();
     window.__roundDates = rounds.map(function(r){ return r.time; });
   });
 
-  // --- Stats & graphiques ---
+  // Stats
   var playerStatsModal = document.getElementById("playerStatsModal");
   var playerStatsContent = document.getElementById("playerStatsContent");
   document.getElementById("closePlayerStats").addEventListener('click', function(){ backdrop.classList.remove("open"); playerStatsModal.classList.remove("open"); });
 
   function getStatsAllRoundsForPlayer(id){
-    var scores = []; for (var i=0;i<rounds.length;i++){ var v = rounds[i].totals[id]; if (typeof v === "number") scores.push(v); }
+    var scores = []; rounds.forEach(function(r){ var v = r.totals[id]; if (typeof v === "number") scores.push(v); });
     var count = scores.length;
     if (!count) return {avg:null, best:null, worst:null, count:0, scores:[], wins:0, podiums:0, winRate:0, recentAvg:null, trend:null, bestStreak:0};
-    var sum=0; for (var a=0;a<scores.length;a++) sum+=scores[a];
+    var sum = scores.reduce(function(a,b){ return a+b; },0);
     var avg = Math.round(sum / count);
     var best = Math.max.apply(null, scores);
     var worst = Math.min.apply(null, scores);
     var wins=0, podiums=0;
-    for (var r=0;r<rounds.length;r++){ 
-      var arr = Object.keys(rounds[r].totals).map(function(pid){ return {pid:pid, t:Number(rounds[r].totals[pid])||0}; }).sort(function(x,y){ return y.t - x.t; });
-      var rank=-1; for (var m=0;m<arr.length;m++) if (arr[m].pid===id) { rank=m; break; }
+    rounds.forEach(function(r){
+      var arr = Object.keys(r.totals).map(function(pid){ return {pid:pid, t:Number(r.totals[pid])||0}; }).sort(function(a,b){ return b.t-a.t; });
+      var rank = arr.findIndex(function(x){ return x.pid===id; });
       if (rank===0) wins++;
       if (rank>-1 && rank<3) podiums++;
-    }
+    });
     var winRate = Math.round((wins / count) * 100);
-    var last5 = scores.slice(-5); var s5=0; for (var b=0;b<last5.length;b++) s5+=last5[b];
-    var recentAvg = last5.length ? Math.round(s5/last5.length) : null;
+    var last5 = scores.slice(-5);
+    var recentAvg = last5.length ? Math.round(last5.reduce(function(a,b){ return a+b; },0)/last5.length) : null;
     var trend = (recentAvg!=null ? recentAvg - avg : null);
     var bestStreak=0, cur=0;
-    for (var r2=0;r2<rounds.length;r2++){ 
-      var arr2 = Object.keys(rounds[r2].totals).map(function(pid){ return {pid:pid, t:Number(rounds[r2].totals[pid])||0}; }).sort(function(x,y){ return y.t - x.t; });
-      if (arr2[0] && arr2[0].pid===id){ cur++; if (cur>bestStreak) bestStreak=cur; } else cur=0;
-    }
+    rounds.forEach(function(r){
+      var arr = Object.keys(r.totals).map(function(pid){ return {pid:pid, t:Number(r.totals[pid])||0}; }).sort(function(a,b){ return b.t-a.t; });
+      if (arr[0] && arr[0].pid===id){ cur++; if (cur>bestStreak) bestStreak=cur; } else cur=0;
+    });
     return {avg:avg, best:best, worst:worst, count:count, scores:scores, wins:wins, podiums:podiums, winRate:winRate, recentAvg:recentAvg, trend:trend, bestStreak:bestStreak};
   }
 
@@ -616,10 +574,16 @@
     var range = Math.max(1, max-min);
     var step = (w-2*p)/Math.max(1, values.length-1);
     var pts = "";
-    for (var i=0;i<values.length;i++){ var v=values[i]; var x = p + i*step; var y = h - p - ((v-min)/range)*(h-2*p); pts += (i?" ":"") + x + "," + y; }
+    values.forEach(function(v,i){
+      var x = p + i*step;
+      var y = h - p - ((v-min)/range)*(h-2*p);
+      pts += (i?" ":"") + x + "," + y;
+    });
     var y0 = h-p, x0 = p;
     var yTicks = 5, grid = "";
-    for(var i2=0;i2<=yTicks;i2++){ var val = min + (range * i2 / yTicks); var y = h - p - ((val-min)/range)*(h-2*p);
+    for(var i2=0;i2<=yTicks;i2++){
+      var val = min + (range * i2 / yTicks);
+      var y = h - p - ((val-min)/range)*(h-2*p);
       grid += '<text x="'+(x0-6)+'" y="'+(y+4)+'" font-size="10" text-anchor="end">'+Math.round(val)+'</text>';
       grid += '<line x1="'+x0+'" y1="'+y+'" x2="'+(w-p)+'" y2="'+y+'" stroke="currentColor" opacity="0.14"/>';
     }
@@ -643,19 +607,20 @@
   }
 
   function openPlayerStats(playerId){
-    var p = null; for (var i=0;i<state.players.length;i++) if (state.players[i].id===playerId) { p = state.players[i]; break; } if (!p) return;
+    var p = state.players.find(function(x){ return x.id===playerId; }); if (!p) return;
     var name = escapeHtml(p.name||"Joueur");
     var cur = totals(p.scores);
     var currentSorted = state.players.map(function(x){ return {id:x.id, total: totals(x.scores).total}; }).sort(function(a,b){ return b.total-a.total; });
-    var rank = "-"; for (var r=0;r<currentSorted.length;r++) if (currentSorted[r].id===playerId) { rank = (r+1); break; }
-    var leader = currentSorted[0]; var me = null; for (var i2=0;i2<currentSorted.length;i2++) if (currentSorted[i2].id===playerId) { me = currentSorted[i2]; break; } var diffLeader = leader ? (leader.total - (me?me.total:0)) : 0;
+    var rank = (currentSorted.findIndex(function(x){ return x.id===playerId; }) + 1) || "-";
+    var leader = currentSorted[0]; var me = currentSorted.find(function(x){ return x.id===playerId; }) || {total:0};
+    var diffLeader = leader ? (leader.total - me.total) : 0;
     var filled = countFilled(p.scores); var totalCells = ALL_CATS.length;
     var up = cur.upper, lo = cur.lower, bon = cur.bonus, need = Math.max(0, 63 - sumUpper(p.scores));
 
     var all = getStatsAllRoundsForPlayer(playerId);
     var svg = makeChart(all.scores, "Numéro de manche", "Score total");
 
-    var html = '\
+    playerStatsContent.innerHTML = '\
       <div class="stats-grid mini player-card">\
         <div class="card">\
           <h4>Manche actuelle — '+name+'</h4>\
@@ -684,11 +649,10 @@
           </div>\
         </div>\
       </div>';
-    playerStatsContent.innerHTML = html;
     backdrop.classList.add("open"); playerStatsModal.classList.add("open");
   }
 
-  // --- Export / Import / PDF ---
+  // Export / Import / PDF
   document.getElementById("exportBtn").addEventListener('click', function(){
     var payload = { etat: state, historique_manches: rounds };
     var blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
@@ -726,7 +690,6 @@
     var wrapPlayers = document.getElementById("printPlayers");
     wrapLB.innerHTML = ""; wrapRounds.innerHTML = ""; wrapPlayers.innerHTML = ""; wrapRoundDetails.innerHTML = "";
 
-    // Leaderboard
     var lbCurrent = state.players.map(function(p){ return { id:p.id, name:p.name||"Sans nom", total: totals(p.scores).total }; }).sort(function(a,b){ return b.total - a.total; });
     var lbAvg = state.players.map(function(p){ var st = getStatsAllRoundsForPlayer(p.id); return { name:p.name||"Sans nom", avg: st.avg || 0, best: st.best || 0 }; }).sort(function(a,b){ return b.avg - a.avg; });
     var wmap = winsTable(); var lbWins = state.players.map(function(p){ return { name:p.name||"Sans nom", w: wmap[p.id]||0 }; }).sort(function(a,b){ return b.w - a.w; });
@@ -735,35 +698,38 @@
       <div><strong>Moyenne (toutes manches) :</strong> '+ (lbAvg.map(function(r,i){ return (i+1)+". "+r.name+" — moy "+r.avg+" (max "+r.best+")"; }).join(" • ") || "<em>Aucun joueur</em>") +'</div>\
       <div><strong>Par victoires :</strong> '+ (lbWins.map(function(r,i){ return (i+1)+". "+r.name+" — "+r.w+" vic."; }).join(" • ") || "<em>Aucun joueur</em>") +'</div>';
 
-    // Totaux par partie
     var players = state.players.slice();
     window.__roundDates = rounds.map(function(r){ return r.time; });
     var head = '<tr><th>Partie</th>'+players.map(function(p){ return '<th>'+escapeHtml(p.name||"Joueur")+'</th>'; }).join("")+'</tr>';
     var rowsHtml = "";
-    for (var i=0;i<rounds.length;i++){ var r = rounds[i]; var date = new Date(r.time).toLocaleString();
+    rounds.forEach(function(r,i){
+      var date = new Date(r.time).toLocaleString();
       var tds = players.map(function(p){ var v = (r.totals[p.id] != null ? r.totals[p.id] : ""); return '<td style="text-align:right">'+v+'</td>'; }).join("");
       rowsHtml += '<tr><td>'+(i+1)+' — '+date+'</td>'+tds+'</tr>';
-    }
+    });
     if (!rowsHtml) rowsHtml = "<tr><td colspan='"+(players.length+1)+"'><em>Aucune partie</em></td></tr>";
     wrapRounds.innerHTML = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">'+head+rowsHtml+'</table>';
 
-    // Détail par manche (catégories)
     var detailAll = "";
-    for (var rIdx=0;rIdx<rounds.length;rIdx++){ var R = rounds[rIdx];
+    rounds.forEach(function(R, rIdx){
       var header = '<tr><th>Catégorie</th>'+players.map(function(p){ return '<th>'+escapeHtml(p.name||"Joueur")+'</th>'; }).join("")+'</tr>';
       var rowsD = "";
-      for (var c=0;c<ALL_CATS.length;c++){ var cat = ALL_CATS[c]; var tds='';
-        for (var pi=0;pi<players.length;pi++){ var pid = players[pi].id; var sv = (R.scores && R.scores[pid] && (R.scores[pid][cat.key]!==undefined) ? R.scores[pid][cat.key] : ""); tds += '<td style="text-align:center">'+(sv===" "?"":sv)+'</td>'; }
+      ALL_CATS.forEach(function(cat){
+        var tds='';
+        players.forEach(function(p){
+          var pid = p.id; var sv = (R.scores && R.scores[pid] && (R.scores[pid][cat.key]!==undefined) ? R.scores[pid][cat.key] : "");
+          tds += '<td style="text-align:center">'+(sv===" "?"":sv)+'</td>';
+        });
         rowsD += '<tr><td>'+cat.label+'</td>'+tds+'</tr>';
-      }
+      });
       detailAll += '<div style="margin:10px 0;page-break-inside:avoid"><strong>Partie '+(rIdx+1)+' — '+ new Date(R.time).toLocaleString() +'</strong><br>'+
                    '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%">'+header+rowsD+'</table></div>';
-    }
+    });
     wrapRoundDetails.innerHTML = detailAll || "<em>Aucune partie</em>";
 
-    // Fiches joueurs
     var statsHtml = "";
-    for (var pIdx=0;pIdx<state.players.length;pIdx++){ var p = state.players[pIdx]; var all = getStatsAllRoundsForPlayer(p.id); var svg = makeChart(all.scores, "Numéro de manche", "Score total");
+    state.players.forEach(function(p){
+      var all = getStatsAllRoundsForPlayer(p.id); var svg = makeChart(all.scores, "Numéro de manche", "Score total");
       statsHtml += '<div class="player-card" style="margin:8px 0;padding:8px;border:1px solid #999">\
         <strong>'+escapeHtml(p.name||"Joueur")+'</strong>\
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">\
@@ -782,11 +748,11 @@
           </div>\
         </div>\
       </div>';
-    }
+    });
     wrapPlayers.innerHTML = statsHtml;
   }
 
-  // --- UI : ajouter joueur & réglages ---
+  // Add player & settings
   document.getElementById("addPlayerBtn").addEventListener('click', function(){
     var nameInput = document.getElementById("playerName");
     var name = (nameInput.value || "").trim();
@@ -810,20 +776,17 @@
   backdrop.addEventListener("click", function(){ closeSettingsModal(); document.getElementById("historyModal").classList.remove("open"); document.getElementById("playerStatsModal").classList.remove("open"); });
 
   var presetSelect = document.getElementById("presetDisplay");
-  presetSelect.addEventListener("change", function(e){ applyUIPreset(e.target.value); });
+  if (presetSelect) presetSelect.addEventListener("change", function(e){ applyUIPreset(e.target.value); });
 
-  // Initial
-  buildTable(); renderLeaderboard();
-  window.__roundDates = rounds.map(function(r){ return r.time; });
-
-  // Thème manuel/auto
-  var radios = document.querySelectorAll('input[name="themeMode"]');
-  for (var i=0;i<radios.length;i++) radios[i].addEventListener('change', function(e){
-    try{ localStorage.setItem(THEME_KEY, e.target.value); }catch(err){}
-    applyTheme(e.target.value);
+  // Theme radios
+  document.querySelectorAll('input[name="themeMode"]').forEach(function(radio){
+    radio.addEventListener('change', function(e){
+      try{ localStorage.setItem("yams-theme-mode", e.target.value); }catch(err){}
+      applyTheme(e.target.value);
+    });
   });
 
-  // Boutons de données / cache
+  // Cache clear
   document.getElementById("clearCacheBtn").addEventListener('click', async function(){
     try{
       var keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); }));
@@ -832,9 +795,13 @@
     }catch(e){ alert("Impossible de vider les caches : " + e.message); }
   });
 
+  // Init
+  buildTable(); renderLeaderboard();
+  window.__roundDates = rounds.map(function(r){ return r.time; });
+
   // SW
   if ("serviceWorker" in navigator){
-    window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw-v12.4.js"); });
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw-v12.5.js"); });
   }
 })();
 </script>
