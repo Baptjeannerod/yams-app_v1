@@ -1,1 +1,1 @@
-Version v7.4.5 SAFE: fix des inputs (text+numeric), classement unifié, colonnes Catégorie/Total fixées, UI allégée, version en réglages, presets renommés, bouton unique Clôturer (relance auto), sauvegarde détaillée des manches, PDF détaillé, SW 12.5.
+Version v7.4.6 SAFE: 1re colonne (en-tête + cellules + Total) collée à gauche, suppression de la colonne Total à droite, fix inputs, SW 12.6.

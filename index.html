@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<link rel="manifest" href="manifest.webmanifest?v=12.5">
+<link rel="manifest" href="manifest.webmanifest?v=12.6">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Yam’s — Feuille de score & Classement</title>
 <style>
@@ -57,17 +57,18 @@
   }
   html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select { background:#111827; }
 
+  /* Classement unifié */
   .leaderboard { background: var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px; display:grid; gap:10px; }
   .lb-head { display:flex; align-items:center; gap:10px; }
   .lb-list span{ padding:6px 10px; border:1px solid var(--accent-border); border-radius:999px; background:var(--accent-soft); font-weight:700; display:inline-block; margin:2px 6px 2px 0; }
 
+  /* Grille de saisie */
   .table-wrap{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); overflow: auto; }
   table { width:100%; border-collapse: separate; border-spacing: 0; min-width: 900px; }
   thead th{ position: sticky; top:0; z-index: 5; background: var(--sticky); border-bottom: 1px solid var(--border); text-align: center; }
   th, td{ padding: var(--dense-pad) 6px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); background-clip: padding-box; font-size: var(--dense-font); }
   th:last-child, td:last-child{ border-right: none; }
   tbody tr:nth-child(odd){ background: var(--row-alt); }
-  th.cat, td.cat{ width: 220px; text-align: left; }
   th.player{ min-width: var(--col-min); }
   .player-head{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
   .player-head .name{ font-weight:700; text-align:center; }
@@ -77,8 +78,11 @@
   .cell input.is-empty{ background: var(--danger); border-color: var(--danger-border); }
   .cell input.is-filled{ background: var(--success); border-color: var(--success-border); }
 
-  th.first-col, td.first-col{ position: sticky; left: 0; z-index: 4; background: var(--sticky); }
-  th.total-col, td.total-col{ position: sticky; right: 0; z-index: 4; background: var(--sticky); }
+  /* Colonne 1 sticky (en-tête + corps + Total) */
+  table thead th:first-child,
+  table tbody td:first-child{ position: sticky; left: 0; z-index: 6; background: var(--sticky); }
+
+  /* Ligne Total sticky en bas (sans colonne droite) */
   tr.last-row td{ position: sticky; bottom: 0; background: var(--sticky); z-index: 3; }
 
   .subtotal{ color: var(--muted); font-weight: 600; text-align:center; }
@@ -215,7 +219,7 @@
         <input id="importFile" class="hidden-input" type="file" accept="application/json" />
       </div>
     </div>
-    <div class="section"><div class="muted">Version : v7.4.5</div></div>
+    <div class="section"><div class="muted">Version : v7.4.6</div></div>
   </div>
 
   <div id="historyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
@@ -342,7 +346,7 @@
   function sumLower(scores){ var s=0; for (var i=0;i<CATS_LOWER.length;i++) s += num(scores[CATS_LOWER[i].key]||0); return s; }
   function bonus(upper){ return upper >= 63 ? 35 : 0; }
   function totals(scores){ var u = sumUpper(scores), b = bonus(u), l = sumLower(scores); return { upper:u, bonus:b, lower:l, total:u + b + l }; }
-  function escapeHtml(str){ return String(str).replace(/[&<>\"']/g, function(s){ return {"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[s]; }); }
+  function escapeHtml(str){ return String(str).replace(/[&<>\"']/g, function(s){ return {"&":"&amp;","<":"&lt;","&gt":"&gt;","\"":"&quot;","'":"&#39;"}[s]; }); }
   function countFilled(scores){ var c=0; for (var k in scores) if (scores[k]!=="" && scores[k]!=null) c++; return c; }
 
   // Build table
@@ -352,7 +356,7 @@
   function buildTable(){
     thead.innerHTML = "";
     var trHead = document.createElement("tr");
-    var thCat = document.createElement("th"); thCat.className = "cat first-col"; thCat.textContent = "Catégorie"; trHead.appendChild(thCat);
+    var thCat = document.createElement("th"); thCat.textContent = "Catégorie"; trHead.appendChild(thCat);
 
     state.players.forEach(function(p){
       var th = document.createElement("th");
@@ -382,19 +386,18 @@
       trHead.appendChild(th);
     });
 
-    var thTotal = document.createElement("th"); thTotal.className = "total-col"; thTotal.textContent = "Total"; trHead.appendChild(thTotal);
     thead.appendChild(trHead);
 
     tbody.innerHTML = "";
     function addRow(label, key, hint, max, className, isLast){
       var tr = document.createElement("tr"); if (isLast) tr.classList.add("last-row");
-      var tdCat = document.createElement("td"); tdCat.className = "cat first-col "+(className||""); tdCat.innerHTML = label + (hint? ' <span class="muted">('+hint+')</span>' : ''); tr.appendChild(tdCat);
+      var tdCat = document.createElement("td"); tdCat.className = (className||""); tdCat.innerHTML = label + (hint? ' <span class="muted">('+hint+')</span>' : ''); tr.appendChild(tdCat);
 
       state.players.forEach(function(p){
         var td = document.createElement("td"); td.className = "cell "+(className||"");
         if (key.charAt(0) !== "_"){
           var input = document.createElement("input");
-          input.type = "text"; // robust across iOS/macOS
+          input.type = "text";
           input.setAttribute("inputmode","numeric");
           input.setAttribute("pattern","[0-9]*");
           input.autocomplete = "off";
@@ -421,9 +424,6 @@
         } else { td.textContent = ""; }
         tr.appendChild(td);
       });
-
-      var tdTot = document.createElement("td"); tdTot.className = "total-col "+(className||""); tdTot.textContent = "";
-      tr.appendChild(tdTot);
 
       tbody.appendChild(tr);
     }
@@ -801,7 +801,7 @@
 
   // SW
   if ("serviceWorker" in navigator){
-    window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw-v12.5.js"); });
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw-v12.6.js"); });
   }
 })();
 </script>
